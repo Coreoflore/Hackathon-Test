@@ -38,7 +38,13 @@ export default function App() {
   const [isReporting, setIsReporting] = useState(false);
 
   function handleSessionReady(nextSession) {
+    if (!Array.isArray(nextSession?.questions) || nextSession.questions.length === 0) {
+      setError('The server returned no interview questions. Please try again.');
+      return;
+    }
+
     setError('');
+    setReport(null);
     setSession(nextSession);
     setStage('interview');
   }
@@ -57,6 +63,7 @@ export default function App() {
       setStage('report');
     } catch (requestError) {
       setError(requestError.message);
+      throw requestError;
     } finally {
       setIsReporting(false);
     }

@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk';
 
 const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
-const model = process.env.GROQ_MODEL || 'llama3-70b-8192';
+const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 const timeoutMs = Number(process.env.GROQ_TIMEOUT_MS || 45000);
 
 function clip(value, maxLength = 16000) {
@@ -80,18 +80,23 @@ export async function generateCandidateAnalysis(resumeText, repoData, targetRole
   };
 }
 
-export async function generateQuestions(analysisJson) {
+export async function generateQuestions(analysisJson, questionCount = Number(process.env.QUESTION_COUNT || 6)) {
+  const count = Number(questionCount);
+  if (!Number.isInteger(count) || count < 3 || count > 12) {
+    throw new Error('Question count must be an integer between 3 and 12.');
+  }
+
   const result = await requestJson(
-    'You are an expert interviewer. Return only valid JSON in the shape {"questions":[...]}. The questions array must contain exactly 6 objects. Every object must have text, type, targets (array), and difficulty.',
-    `Using this grounded candidate analysis, create exactly six interview questions that test whether the candidate can defend their claims. Mix technical, behavioral, project-deep-dive, and verification questions. Make each question specific and answerable.\n\nANALYSIS:\n${clip(analysisJson, 14000)}`
+    'You are an expert interviewer. Return only valid JSON in the shape {"questions":[...]}. Every question object must have text, type, targets (array), and difficulty.',
+    `Using this grounded candidate analysis, create exactly ${count} interview questions that test whether the candidate can defend their claims. Mix technical, behavioral, project-deep-dive, and verification questions where the count allows. Make each question specific and answerable.\n\nANALYSIS:\n${clip(analysisJson, 14000)}`
   );
 
   const questions = Array.isArray(result) ? result : result.questions;
-  if (!Array.isArray(questions) || questions.length < 6) {
-    throw new Error('Groq did not return six interview questions.');
+  if (!Array.isArray(questions) || questions.length < count) {
+    throw new Error(`Groq did not return ${count} interview questions.`);
   }
 
-  return questions.slice(0, 6).map((question) => ({
+  return questions.slice(0, count).map((question) => ({
     text: String(question.text || 'Explain a technical decision you made in a recent project.'),
     type: String(question.type || 'technical'),
     targets: Array.isArray(question.targets) ? question.targets.map(String) : [],

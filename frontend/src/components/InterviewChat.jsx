@@ -5,9 +5,13 @@ export default function InterviewChat({ questions, onAnswer, onFinish, isFinishi
   const [answer, setAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const question = questions[currentIndex];
-  const isLastQuestion = currentIndex === questions.length - 1;
-  const progress = ((currentIndex + 1) / questions.length) * 100;
+  const questionList = Array.isArray(questions) ? questions : [];
+  const totalQuestions = questionList.length;
+  const question = questionList[currentIndex];
+  const isLastQuestion = currentIndex === totalQuestions - 1;
+  const progress = totalQuestions > 0
+    ? Math.min(100, Math.max(0, ((currentIndex + 1) / totalQuestions) * 100))
+    : 0;
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -33,7 +37,16 @@ export default function InterviewChat({ questions, onAnswer, onFinish, isFinishi
     }
   }
 
-  if (!question) return null;
+  if (!question) {
+    return (
+      <section className="mx-auto max-w-3xl py-16">
+        <div className="rounded-3xl border border-rose-400/30 bg-rose-400/10 p-8 text-center">
+          <h1 className="text-2xl font-semibold text-white">No interview questions are available.</h1>
+          <p className="mt-3 text-sm leading-6 text-rose-100/80">The session did not return a usable question list. Please start a new session.</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto max-w-3xl py-8 sm:py-16">
@@ -42,11 +55,18 @@ export default function InterviewChat({ questions, onAnswer, onFinish, isFinishi
           <p className="text-sm font-medium text-cyan-200">Live interview</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Defend your work.</h1>
         </div>
-        <p className="text-sm text-slate-500">Question {currentIndex + 1} of {questions.length}</p>
+        <p className="text-sm text-slate-500">Question {currentIndex + 1} of {totalQuestions}</p>
       </div>
 
-      <div className="mb-8 h-1.5 overflow-hidden rounded-full bg-slate-800">
-        <div className="h-full rounded-full bg-cyan-300 transition-all duration-500" style={{ width: `${progress}%` }} />
+      <div
+        className="mb-8 h-1.5 overflow-hidden rounded-full bg-slate-800"
+        role="progressbar"
+        aria-label="Interview progress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow={Math.round(progress)}
+      >
+        <div className="h-full rounded-full bg-cyan-300 transition-[width] duration-500" style={{ width: `${progress}%` }} />
       </div>
 
       <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-6 shadow-glow sm:p-10">

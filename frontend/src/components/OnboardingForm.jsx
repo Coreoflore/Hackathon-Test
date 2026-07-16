@@ -14,6 +14,7 @@ export default function OnboardingForm({ onSessionReady }) {
   const [file, setFile] = useState(null);
   const [repoUrl, setRepoUrl] = useState('');
   const [targetRole, setTargetRole] = useState(roles[0]);
+  const [questionCount, setQuestionCount] = useState(6);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,12 +25,28 @@ export default function OnboardingForm({ onSessionReady }) {
       return;
     }
 
+    const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+    if (!['.pdf', '.docx'].includes(extension)) {
+      setError('Resume must be a PDF or DOCX file.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Resume files must be smaller than 10 MB.');
+      return;
+    }
+
+    const parsedQuestionCount = Number(questionCount);
+    if (!Number.isInteger(parsedQuestionCount) || parsedQuestionCount < 3 || parsedQuestionCount > 12) {
+      setError('Interview length must be a whole number between 3 and 12.');
+      return;
+    }
+
     setError('');
     setIsLoading(true);
     try {
       const { resumeText } = await uploadResume(file);
-      const session = await createSession({ resumeText, repoUrl, targetRole });
-      onSessionReady({ ...session, repoUrl, targetRole });
+      const session = await createSession({ resumeText, repoUrl, targetRole, questionCount: parsedQuestionCount });
+      onSessionReady({ ...session, repoUrl, targetRole, questionCount: parsedQuestionCount });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -86,6 +103,14 @@ export default function OnboardingForm({ onSessionReady }) {
             <select value={targetRole} onChange={(event) => setTargetRole(event.target.value)} className="input-field mt-2">
               {roles.map((role) => <option key={role}>{role}</option>)}
             </select>
+          </label>
+
+          <label className="block text-sm text-slate-300">
+            Interview length
+            <span className="mt-2 flex items-center gap-3">
+              <input value={questionCount} onChange={(event) => setQuestionCount(event.target.value)} type="number" min="3" max="12" step="1" className="input-field" />
+              <span className="shrink-0 text-xs text-slate-500">questions · choose 3–12</span>
+            </span>
           </label>
         </div>
 

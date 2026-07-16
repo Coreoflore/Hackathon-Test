@@ -41,6 +41,11 @@ function normalizeQuestions(questions) {
   }));
 }
 
+function requestedQuestionCount(value) {
+  const count = value === undefined ? Number(process.env.QUESTION_COUNT || 6) : Number(value);
+  return Number.isInteger(count) && count >= 3 && count <= 12 ? count : null;
+}
+
 router.get('/health', (_request, response) => {
   response.json({ ok: true, database: mongoose.connection.readyState === 1 });
 });
@@ -51,25 +56,31 @@ router.post('/upload-resume', uploadResume, asyncHandler(async (request, respons
 }));
 
 router.post('/sessions', asyncHandler(async (request, response) => {
-  if (!requireDatabase(response)) return;
-
-  const { resumeText, repoUrl = '', targetRole } = request.body || {};
-  if (!resumeText?.trim()) {
+  const { resumeText, repoUrl = '', targetRole, questionCount } = request.body || {};
+  if (typeof resumeText !== 'string' || !resumeText.trim()) {
     response.status(400).json({ error: 'resumeText is required.' });
     return;
   }
-  if (!targetRole?.trim()) {
+  if (typeof targetRole !== 'string' || !targetRole.trim()) {
     response.status(400).json({ error: 'targetRole is required.' });
     return;
   }
 
-  const repoData = await fetchRepoMetadata(repoUrl);
+  const count = requestedQuestionCount(questionCount);
+  if (!count) {
+    response.status(400).json({ error: 'questionCount must be an integer between 3 and 12.' });
+    return;
+  }
+  if (!requireDatabase(response)) return;
+
+  const normalizedRepoUrl = typeof repoUrl === 'string' ? repoUrl.trim() : '';
+  const repoData = await fetchRepoMetadata(normalizedRepoUrl);
   const analysisResult = await generateCandidateAnalysis(resumeText, repoData, targetRole);
-  const questions = normalizeQuestions(await generateQuestions(analysisResult));
+  const questions = normalizeQuestions(await generateQuestions(analysisResult, count));
   const candidate = await Candidate.create({ ...candidateBasics(resumeText), resumeText: resumeText.trim() });
   const session = await Session.create({
     candidateId: candidate._id,
-    repoUrl: repoUrl.trim(),
+    repoUrl: normalizedRepoUrl,
     targetRole: targetRole.trim(),
     repoData,
     analysisResult,
@@ -79,6 +90,7 @@ router.post('/sessions', asyncHandler(async (request, response) => {
 
   response.status(201).json({
     sessionId: session._id,
+    questionCount: questions.length,
     questions,
     analysis: analysisResult
   });
@@ -93,18 +105,28 @@ router.post('/sessions/:id/answer', asyncHandler(async (request, response) => {
     response.status(400).json({ error: 'Invalid session ID.' });
     return;
   }
-  if (!questionId || !answerText?.trim()) {
+  if (questionId === undefined || questionId === null || questionId === '' || typeof answerText !== 'string' || !answerText.trim()) {
     response.status(400).json({ error: 'questionId and answerText are required.' });
     return;
   }
 
-  const session = await Session.findById(id).select('_id').lean();
+  const session = await Session.findById(id).select('_id questions').lean();
   if (!session) {
     response.status(404).json({ error: 'Session not found.' });
     return;
   }
 
-  const answer = await Answer.create({ sessionId: id, questionId: String(questionId), answerText: answerText.trim() });
+  const questionIndex = Number(questionId);
+  if (!Number.isInteger(questionIndex) || questionIndex < 0 || questionIndex >= session.questions.length) {
+    response.status(400).json({ error: 'questionId does not refer to a question in this session.' });
+    return;
+  }
+
+  const answer = await Answer.findOneAndUpdate(
+    { sessionId: id, questionId: String(questionIndex) },
+    { $set: { answerText: answerText.trim(), timestamp: new Date() } },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
   response.status(201).json({ answerId: answer._id, saved: true });
 }));
 
@@ -127,6 +149,11 @@ router.post('/sessions/:id/report', asyncHandler(async (request, response) => {
     Candidate.findById(session.candidateId).lean(),
     Answer.find({ sessionId: id }).sort({ timestamp: 1 }).lean()
   ]);
+
+  if (answers.length < session.questions.length) {
+    response.status(400).json({ error: `Answer all ${session.questions.length} questions before requesting the report.` });
+    return;
+  }
 
   const report = await generateFinalReport(
     {

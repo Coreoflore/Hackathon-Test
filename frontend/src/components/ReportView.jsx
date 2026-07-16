@@ -51,7 +51,7 @@ export default function ReportView({ report, targetRole, onRestart }) {
       </section>
 
       <div className="mt-6">
-        <ListSection title="Recommended next steps" items={nextSteps} />
+        <ListSection title="Recommended next steps for you" items={nextSteps} />
       </div>
     </section>
   );

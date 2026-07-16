@@ -5,7 +5,7 @@ import Session from '../models/Session.js';
 import Answer from '../models/Answer.js';
 import { fetchRepoMetadata } from '../services/githubService.js';
 import { extractResumeText, uploadResume } from '../services/uploadService.js';
-import { evaluateAnswerText, summarizeAnswerQuality } from '../services/answerService.js';
+import { summarizeAnswerQuality } from '../services/answerService.js';
 import {
   generateCandidateAnalysis,
   generateFinalReport,
@@ -58,7 +58,11 @@ function guardReportAgainstWeakAnswers(report, answerQuality) {
       recommended_level: 'Insufficient evidence',
       strengths: [],
       gaps: [warning, ...gaps.filter((gap) => gap !== warning)],
-      next_steps: ['Repeat the interview with specific examples, decisions, and measurable outcomes.', ...nextSteps.filter((step) => !String(step).startsWith('Repeat the interview'))]
+      next_steps: [
+        'Strengthen each resume claim with a specific project example, your individual contribution, and measurable results.',
+        'Practice answering each interview question with the situation, your decision, the trade-off you considered, and the outcome.',
+        ...nextSteps.filter((step) => !String(step).startsWith('Strengthen each resume claim'))
+      ]
     };
   }
 
@@ -178,21 +182,26 @@ router.post('/sessions/:id/report', asyncHandler(async (request, response) => {
     return;
   }
 
-  const report = await generateFinalReport(
+  const answerPayload = answers.map(({ questionId, answerText, timestamp }) => ({ questionId, answerText, timestamp }));
+  const answerQuality = summarizeAnswerQuality(answerPayload);
+
+  const generatedReport = await generateFinalReport(
     {
       targetRole: session.targetRole,
       repoUrl: session.repoUrl,
       repoData: session.repoData,
       analysisResult: session.analysisResult,
       questions: session.questions,
+      answerQuality,
       candidate: {
         name: candidate?.name,
         email: candidate?.email,
         resumeText: candidate?.resumeText
       }
     },
-    answers.map(({ questionId, answerText, timestamp }) => ({ questionId, answerText, timestamp }))
+    answerPayload
   );
+  const report = guardReportAgainstWeakAnswers(generatedReport, answerQuality);
 
   await Session.findByIdAndUpdate(id, { finalReport: report, status: 'completed' });
   response.json(report);

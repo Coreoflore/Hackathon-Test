@@ -81,11 +81,20 @@ function normalizeEvidence(value, evidenceCorpus) {
 }
 
 export function normalizeFinalReport(result, sessionData = {}, answersArray = []) {
-  const evidenceCorpus = [
+  const corpusElements = [
     sessionData.candidate?.resumeText,
-    sessionData.repoData,
+    sessionData.repoData?.readme,
+    sessionData.repoData?.repository?.name,
+    sessionData.repoData?.repository?.fullName,
+    sessionData.repoData?.repository?.description,
+    ...(sessionData.repoData?.repository?.topics || []),
     ...answersArray.map((answer) => answer.answerText)
-  ].map((value) => typeof value === 'string' ? value : JSON.stringify(value ?? {})).join('\n');
+  ];
+
+  const evidenceCorpus = corpusElements
+    .map((value) => typeof value === 'string' ? value : '')
+    .filter(Boolean)
+    .join('\n');
 
   return {
     recommended_level: String(result.recommended_level || 'Needs further review'),
@@ -161,9 +170,9 @@ export async function generateQuestions(analysisJson, questionCount = Number(pro
     `Using this grounded candidate analysis and the original repository context, create exactly ${count} interview questions that test whether the candidate can defend their claims. Mix technical, behavioral, project-deep-dive, and verification questions where the count allows. Make each question specific and answerable. A submitted GitHub URL is positive evidence that a repository was provided. If repository metadata loaded, treat the repository, languages, README, and commit/contributor counts as available evidence. Do not write questions with unsupported premises such as "given the lack of evidence in your GitHub repository" when a repository URL or repository metadata exists. For Git/GitHub questions, ask neutrally about how the candidate used Git/GitHub in the project; do not assume either proficiency or lack of proficiency.\n\nANALYSIS:\n${clip(analysisJson, 14000)}\n\nSUBMITTED REPOSITORY URL:\n${clip(repoUrl)}\n\nREPOSITORY CONTEXT:\n${clip(repoData, 18000)}`
   );
 
-  const questions = Array.isArray(result) ? result : result.questions;
-  if (!Array.isArray(questions) || questions.length < count) {
-    throw new Error(`Groq did not return ${count} interview questions.`);
+  const questions = Array.isArray(result) ? result : result?.questions;
+  if (!Array.isArray(questions) || questions.length === 0) {
+    throw new Error('Groq did not return any interview questions.');
   }
 
   return questions.slice(0, count).map((question) => ({
@@ -176,7 +185,7 @@ export async function generateQuestions(analysisJson, questionCount = Number(pro
 
 export async function generateFinalReport(sessionData, answersArray) {
   const result = await requestJson(
-    'You are a hiring manager writing a concise, evidence-based interview report. Return only valid JSON with exactly these keys: recommended_level (string), strengths (array), gaps (array), undefended_project (object with name and reason strings), next_steps (array), answer_reviews (array), evidence (array). You must explicitly identify the project that was least defended by the answers; never leave undefended_project vague. The next_steps array must be candidate-facing coaching for the person who submitted the resume and answered the interview questions, not instructions for the interviewer or hiring team. Write every next step directly to the candidate in the second person (for example, "Clarify...", "Add...", or "Practice..."). Never tell an interviewer to ask, probe, reject, advance, or schedule the candidate. Each answer_reviews item must have question_id, score (0-100), strengths (array), gaps (array), feedback (string), and evidence_quote (string). Each evidence item must have claim, source (resume, github, or answer), detail, and quote. Quotes must be exact excerpts from the supplied evidence; do not invent or paraphrase quotes.',
+    'You are a hiring manager writing a concise, evidence-based interview report. Return only valid JSON with exactly these keys: recommended_level (string), strengths (array), gaps (array), undefended_project (object with name and reason strings), next_steps (array), answer_reviews (array), evidence (array). You must explicitly identify the project that was least defended by the answers; never leave undefended_project vague. The next_steps array must be candidate-facing coaching for the person who submitted the resume and answered the interview questions, not instructions for the interviewer or hiring team. Write every next step directly to the candidate in the second person (for example, "Clarify...", "Add...", or "Practice..."). Never tell an interviewer to ask, probe, reject, advance, or schedule the candidate. Each answer_reviews item must have question_id (which must be the exact 0-based string index of the question, e.g. "0", "1", "2"), score (0-100), strengths (array), gaps (array), feedback (string), and evidence_quote (string). Each evidence item must have claim, source (resume, github, or answer), detail, and quote. Quotes must be exact excerpts from the supplied evidence; do not invent or paraphrase quotes.',
     `Evaluate the candidate against the target role, original resume/repository evidence, and every answer. Treat unsupported claims and weak answers as gaps. The session context includes a deterministic answerQuality summary; treat it as authoritative evidence quality. If substantive_count is zero, do not report any strengths. Return 3-6 actionable candidate-facing next steps. Include resume-focused guidance for claims, project details, or missing evidence and answer-focused guidance for specificity, ownership, decisions, trade-offs, or measurable outcomes whenever those issues appear in the evidence. For answer_reviews, evaluate each question using the matching answer and score the answer itself, not the resume. For evidence, include only claims directly supported by the supplied material.\n\nSESSION AND ORIGINAL CONTEXT:\n${clip(sessionData, 24000)}\n\nANSWERS:\n${clip(answersArray, 18000)}`
   );
 

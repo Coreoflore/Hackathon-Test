@@ -162,6 +162,10 @@ router.post('/sessions', asyncHandler(async (request, response) => {
 
   const normalizedRepoUrl = typeof repoUrl === 'string' ? repoUrl.trim() : '';
   const repoData = await fetchRepoMetadata(normalizedRepoUrl);
+  if (repoData && repoData.error) {
+    response.status(400).json({ error: repoData.error });
+    return;
+  }
   const analysisResult = await generateCandidateAnalysis(resumeText, repoData, targetRole, normalizedRepoUrl);
   const questions = normalizeQuestions(await generateQuestions(analysisResult, count, repoData, normalizedRepoUrl), repoData, normalizedRepoUrl);
   const candidate = await Candidate.create({ ...candidateBasics(resumeText), resumeText: resumeText.trim() });

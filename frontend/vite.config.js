@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import fs from 'node:fs';
 import path from 'node:path';
+import http from 'node:http';
 
 function readBackendPort() {
   if (process.env.VITE_API_PORT) return process.env.VITE_API_PORT;
@@ -23,7 +24,15 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: apiTarget,
-        changeOrigin: true
+        changeOrigin: true,
+        timeout: 120000,
+        proxyTimeout: 120000,
+        agent: new http.Agent({ keepAlive: false }),
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.warn('Vite proxy error:', err.message);
+          });
+        }
       }
     }
   }

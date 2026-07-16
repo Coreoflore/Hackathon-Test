@@ -5,6 +5,7 @@ import Session from '../models/Session.js';
 import Answer from '../models/Answer.js';
 import { fetchRepoMetadata } from '../services/githubService.js';
 import { extractResumeText, uploadResume } from '../services/uploadService.js';
+import { evaluateAnswerText, summarizeAnswerQuality } from '../services/answerService.js';
 import {
   generateCandidateAnalysis,
   generateFinalReport,
@@ -44,6 +45,28 @@ function normalizeQuestions(questions) {
 function requestedQuestionCount(value) {
   const count = value === undefined ? Number(process.env.QUESTION_COUNT || 6) : Number(value);
   return Number.isInteger(count) && count >= 3 && count <= 12 ? count : null;
+}
+
+function guardReportAgainstWeakAnswers(report, answerQuality) {
+  const gaps = Array.isArray(report.gaps) ? [...report.gaps] : [];
+  const nextSteps = Array.isArray(report.next_steps) ? [...report.next_steps] : [];
+  const warning = `${answerQuality.weak_count} answer${answerQuality.weak_count === 1 ? '' : 's'} did not provide enough substance to verify the candidate's claims.`;
+
+  if (answerQuality.substantive_count === 0) {
+    return {
+      ...report,
+      recommended_level: 'Insufficient evidence',
+      strengths: [],
+      gaps: [warning, ...gaps.filter((gap) => gap !== warning)],
+      next_steps: ['Repeat the interview with specific examples, decisions, and measurable outcomes.', ...nextSteps.filter((step) => !String(step).startsWith('Repeat the interview'))]
+    };
+  }
+
+  if (answerQuality.weak_count > 0 && !gaps.includes(warning)) {
+    gaps.unshift(warning);
+  }
+
+  return { ...report, gaps, next_steps: nextSteps };
 }
 
 router.get('/health', (_request, response) => {

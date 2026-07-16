@@ -13,11 +13,11 @@ export async function uploadResume(file) {
   return request('/upload-resume', { method: 'POST', body: formData });
 }
 
-export function createSession({ resumeText, repoUrl, targetRole }) {
+export function createSession({ resumeText, repoUrl, targetRole, questionCount }) {
   return request('/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ resumeText, repoUrl, targetRole })
+    body: JSON.stringify({ resumeText, repoUrl, targetRole, questionCount })
   });
 }
 

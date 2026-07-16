@@ -4,7 +4,7 @@ import Candidate from '../models/Candidate.js';
 import Session from '../models/Session.js';
 import Answer from '../models/Answer.js';
 import { fetchRepoMetadata } from '../services/githubService.js';
-import { extractResumeText, uploadResume } from '../services/uploadService.js';
+import { extractResumeText, uploadResume, validateResumeText } from '../services/uploadService.js';
 import { summarizeAnswerQuality } from '../services/answerService.js';
 import {
   generateCandidateAnalysis,
@@ -79,6 +79,12 @@ router.get('/health', (_request, response) => {
 
 router.post('/upload-resume', uploadResume, asyncHandler(async (request, response) => {
   const resumeText = await extractResumeText(request.file);
+  const validation = validateResumeText(resumeText);
+  if (!validation.valid) {
+    response.status(400).json({ error: validation.reason });
+    return;
+  }
+
   response.json({ resumeText });
 }));
 
@@ -86,6 +92,11 @@ router.post('/sessions', asyncHandler(async (request, response) => {
   const { resumeText, repoUrl = '', targetRole, questionCount } = request.body || {};
   if (typeof resumeText !== 'string' || !resumeText.trim()) {
     response.status(400).json({ error: 'resumeText is required.' });
+    return;
+  }
+  const resumeValidation = validateResumeText(resumeText);
+  if (!resumeValidation.valid) {
+    response.status(400).json({ error: resumeValidation.reason });
     return;
   }
   if (typeof targetRole !== 'string' || !targetRole.trim()) {

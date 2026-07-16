@@ -2,7 +2,30 @@ import { useState } from 'react';
 import OnboardingForm from './components/OnboardingForm.jsx';
 import InterviewChat from './components/InterviewChat.jsx';
 import ReportView from './components/ReportView.jsx';
-import { requestReport, saveAnswer } from './services/api.js';
+import SessionHistory from './components/SessionHistory.jsx';
+import { deleteSession, requestReport, saveAnswer } from './services/api.js';
+
+const sessionStorageKey = 'grounded-interviewer:session';
+const reportStorageKey = 'grounded-interviewer:report';
+const historyStorageKey = 'grounded-interviewer:history';
+
+function readStoredJson(key) {
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredJson(key, value) {
+  try {
+    if (value === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Local storage is optional; the interview still works without it.
+  }
+}
 
 function AppHeader({ stage }) {
   return (
@@ -31,9 +54,14 @@ function AppHeader({ stage }) {
 }
 
 export default function App() {
-  const [stage, setStage] = useState('onboarding');
-  const [session, setSession] = useState(null);
-  const [report, setReport] = useState(null);
+  const [session, setSession] = useState(() => readStoredJson(sessionStorageKey));
+  const [report, setReport] = useState(() => readStoredJson(reportStorageKey));
+  const [history, setHistory] = useState(() => readStoredJson(historyStorageKey) || []);
+  const [stage, setStage] = useState(() => {
+    if (readStoredJson(reportStorageKey)) return 'report';
+    if (readStoredJson(sessionStorageKey)) return 'interview';
+    return 'onboarding';
+  });
   const [error, setError] = useState('');
   const [isReporting, setIsReporting] = useState(false);
 
@@ -46,6 +74,8 @@ export default function App() {
     setError('');
     setReport(null);
     setSession(nextSession);
+    writeStoredJson(sessionStorageKey, nextSession);
+    writeStoredJson(reportStorageKey, null);
     setStage('interview');
   }
 
@@ -60,6 +90,18 @@ export default function App() {
     try {
       const nextReport = await requestReport(session.sessionId);
       setReport(nextReport);
+      writeStoredJson(reportStorageKey, nextReport);
+      const nextHistory = [
+        {
+          sessionId: session.sessionId,
+          targetRole: session.targetRole,
+          createdAt: new Date().toISOString(),
+          report: nextReport
+        },
+        ...history.filter((item) => item.sessionId !== session.sessionId)
+      ].slice(0, 6);
+      setHistory(nextHistory);
+      writeStoredJson(historyStorageKey, nextHistory);
       setStage('report');
     } catch (requestError) {
       setError(requestError.message);
@@ -69,9 +111,39 @@ export default function App() {
     }
   }
 
+  async function handleDeleteSession() {
+    if (!session?.sessionId || !window.confirm('Delete this interview, resume, answers, and report permanently?')) return;
+
+    setError('');
+    try {
+      await deleteSession(session.sessionId);
+      setSession(null);
+      setReport(null);
+      const nextHistory = history.filter((item) => item.sessionId !== session.sessionId);
+      setHistory(nextHistory);
+      writeStoredJson(sessionStorageKey, null);
+      writeStoredJson(reportStorageKey, null);
+      writeStoredJson(historyStorageKey, nextHistory);
+      setStage('onboarding');
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  function openHistoryItem(item) {
+    setSession({ sessionId: item.sessionId, targetRole: item.targetRole, questions: [] });
+    setReport(item.report);
+    writeStoredJson(sessionStorageKey, { sessionId: item.sessionId, targetRole: item.targetRole, questions: [] });
+    writeStoredJson(reportStorageKey, item.report);
+    setError('');
+    setStage('report');
+  }
+
   function restart() {
     setSession(null);
     setReport(null);
+    writeStoredJson(sessionStorageKey, null);
+    writeStoredJson(reportStorageKey, null);
     setError('');
     setStage('onboarding');
   }
@@ -90,7 +162,12 @@ export default function App() {
           </div>
         )}
 
-        {stage === 'onboarding' && <OnboardingForm onSessionReady={handleSessionReady} />}
+        {stage === 'onboarding' && (
+          <>
+            <OnboardingForm onSessionReady={handleSessionReady} />
+            <SessionHistory items={history} onOpen={openHistoryItem} />
+          </>
+        )}
         {stage === 'interview' && session && (
           <InterviewChat
             questions={session.questions}
@@ -101,7 +178,7 @@ export default function App() {
           />
         )}
         {stage === 'report' && report && (
-          <ReportView report={report} targetRole={session?.targetRole} onRestart={restart} />
+          <ReportView report={report} targetRole={session?.targetRole} onRestart={restart} onDelete={handleDeleteSession} />
         )}
       </main>
     </div>

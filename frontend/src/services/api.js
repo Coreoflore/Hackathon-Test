@@ -32,3 +32,7 @@ export function saveAnswer(sessionId, questionId, answerText) {
 export function requestReport(sessionId) {
   return request(`/sessions/${sessionId}/report`, { method: 'POST' });
 }
+
+export function deleteSession(sessionId) {
+  return request(`/sessions/${sessionId}`, { method: 'DELETE' });
+}

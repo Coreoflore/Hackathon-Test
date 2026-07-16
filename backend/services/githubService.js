@@ -29,6 +29,14 @@ async function githubFetch(path, headers) {
   return body;
 }
 
+async function optionalGithubFetch(path, headers, fallback) {
+  try {
+    return await githubFetch(path, headers);
+  } catch {
+    return fallback;
+  }
+}
+
 export async function fetchRepoMetadata(repoUrl) {
   if (!repoUrl?.trim()) {
     return { repository: null, languages: {}, readme: '' };
@@ -50,7 +58,7 @@ export async function fetchRepoMetadata(repoUrl) {
 
   try {
     const basePath = `/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}`;
-    const [repository, languages, readmeResponse] = await Promise.all([
+    const [repository, languages, readmeResponse, commits, contributors] = await Promise.all([
       githubFetch(basePath, headers),
       githubFetch(`${basePath}/languages`, headers),
       fetch(`${GITHUB_API}${basePath}/readme`, {
@@ -58,7 +66,9 @@ export async function fetchRepoMetadata(repoUrl) {
       }).then(async (response) => {
         if (!response.ok) return '';
         return response.text();
-      })
+      }),
+      optionalGithubFetch(`${basePath}/commits?per_page=10`, headers, []),
+      optionalGithubFetch(`${basePath}/contributors?per_page=10`, headers, [])
     ]);
 
     return {
@@ -74,7 +84,15 @@ export async function fetchRepoMetadata(repoUrl) {
         topics: repository.topics || []
       },
       languages,
-      readme: readmeResponse.slice(0, 24000)
+      readme: readmeResponse.slice(0, 24000),
+      evidence: {
+        submitted_url: repoUrl.trim(),
+        hosted_on_github: true,
+        repository_metadata_loaded: true,
+        readme_available: Boolean(readmeResponse.trim()),
+        recent_commit_count: Array.isArray(commits) ? commits.length : 0,
+        contributor_count: Array.isArray(contributors) ? contributors.length : 0
+      }
     };
   } catch (error) {
     if (error.status === 401 || error.status === 403) {

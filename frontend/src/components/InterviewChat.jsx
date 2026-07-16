@@ -1,8 +1,28 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function InterviewChat({ questions, onAnswer, onFinish, isFinishing }) {
+function draftKey(sessionId, questionIndex) {
+  return `grounded-interviewer:draft:${sessionId}:${questionIndex}`;
+}
+
+function readDraft(sessionId, questionIndex) {
+  try {
+    return window.localStorage.getItem(draftKey(sessionId, questionIndex)) || '';
+  } catch {
+    return '';
+  }
+}
+
+function removeDraft(sessionId, questionIndex) {
+  try {
+    window.localStorage.removeItem(draftKey(sessionId, questionIndex));
+  } catch {
+    // Draft persistence is optional.
+  }
+}
+
+export default function InterviewChat({ questions, sessionId, onAnswer, onFinish, isFinishing }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answer, setAnswer] = useState('');
+  const [answer, setAnswer] = useState(() => readDraft(sessionId, 0));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const questionList = Array.isArray(questions) ? questions : [];
@@ -12,6 +32,16 @@ export default function InterviewChat({ questions, onAnswer, onFinish, isFinishi
   const progress = totalQuestions > 0
     ? Math.min(100, Math.max(0, ((currentIndex + 1) / totalQuestions) * 100))
     : 0;
+
+  useEffect(() => {
+    if (!sessionId) return;
+    try {
+      if (answer.trim()) window.localStorage.setItem(draftKey(sessionId, currentIndex), answer);
+      else window.localStorage.removeItem(draftKey(sessionId, currentIndex));
+    } catch {
+      // Draft persistence is optional.
+    }
+  }, [answer, currentIndex, sessionId]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -24,11 +54,13 @@ export default function InterviewChat({ questions, onAnswer, onFinish, isFinishi
     setIsSubmitting(true);
     try {
       await onAnswer(String(currentIndex), answer.trim());
+      removeDraft(sessionId, currentIndex);
       if (isLastQuestion) {
         await onFinish();
       } else {
-        setCurrentIndex((index) => index + 1);
-        setAnswer('');
+        const nextIndex = currentIndex + 1;
+        setCurrentIndex(nextIndex);
+        setAnswer(readDraft(sessionId, nextIndex));
       }
     } catch (submitError) {
       setError(submitError.message);
@@ -78,7 +110,10 @@ export default function InterviewChat({ questions, onAnswer, onFinish, isFinishi
         {question.targets?.length > 0 && <p className="mt-5 text-sm text-slate-500">Looking for evidence of: {question.targets.join(', ')}</p>}
 
         <form onSubmit={handleSubmit} className="mt-9">
-          <label className="block text-sm font-medium text-slate-300" htmlFor="answer">Your answer</label>
+          <div className="flex items-center justify-between gap-3">
+            <label className="block text-sm font-medium text-slate-300" htmlFor="answer">Your answer</label>
+            <span className="text-xs text-slate-600">{answer.trim().length} characters · saved locally</span>
+          </div>
           <textarea id="answer" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Walk through your reasoning, trade-offs, and what you would do differently..." rows="8" className="input-field mt-3 resize-y leading-7" />
           {error && <p className="mt-3 text-sm text-rose-200">{error}</p>}
           <button disabled={isSubmitting || isFinishing} className="mt-6 w-full rounded-xl bg-cyan-300 px-4 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60" type="submit">

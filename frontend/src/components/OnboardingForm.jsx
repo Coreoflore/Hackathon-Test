@@ -15,6 +15,7 @@ export default function OnboardingForm({ onSessionReady }) {
   const [repoUrl, setRepoUrl] = useState('');
   const [targetRole, setTargetRole] = useState(roles[0]);
   const [questionCount, setQuestionCount] = useState(6);
+  const [parsedResumeText, setParsedResumeText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -44,14 +45,31 @@ export default function OnboardingForm({ onSessionReady }) {
     setError('');
     setIsLoading(true);
     try {
-      const { resumeText } = await uploadResume(file);
-      const session = await createSession({ resumeText, repoUrl, targetRole, questionCount: parsedQuestionCount });
+      if (!parsedResumeText) {
+        const { resumeText } = await uploadResume(file);
+        setParsedResumeText(resumeText);
+        return;
+      }
+
+      const session = await createSession({ resumeText: parsedResumeText, repoUrl, targetRole, questionCount: parsedQuestionCount });
       onSessionReady({ ...session, repoUrl, targetRole, questionCount: parsedQuestionCount });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function handleFileChange(event) {
+    setFile(event.target.files?.[0] || null);
+    setParsedResumeText('');
+    setError('');
+  }
+
+  function chooseDifferentFile() {
+    setFile(null);
+    setParsedResumeText('');
+    setError('');
   }
 
   return (
@@ -89,9 +107,22 @@ export default function OnboardingForm({ onSessionReady }) {
                 <span className="mt-1 block text-xs text-slate-500">Maximum file size: 10 MB</span>
               </span>
               <span className="ml-4 rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-300">Browse</span>
-              <input className="sr-only" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setFile(event.target.files?.[0] || null)} />
+              <input className="sr-only" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleFileChange} />
             </span>
           </label>
+
+          {parsedResumeText && (
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.05] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-emerald-200">Resume text extracted successfully</p>
+                  <p className="mt-1 text-xs text-slate-500">Review the extracted content before starting the interview.</p>
+                </div>
+                <button type="button" onClick={chooseDifferentFile} className="text-xs text-slate-400 underline decoration-slate-700 underline-offset-4 hover:text-white">Choose a different file</button>
+              </div>
+              <pre className="mt-4 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-slate-950/40 p-3 text-xs leading-5 text-slate-400">{parsedResumeText.slice(0, 5000)}{parsedResumeText.length > 5000 ? '\n\n…Preview truncated' : ''}</pre>
+            </div>
+          )}
 
           <label className="block text-sm text-slate-300">
             GitHub repository <span className="text-slate-600">(optional)</span>
@@ -117,7 +148,7 @@ export default function OnboardingForm({ onSessionReady }) {
         {error && <p className="mt-5 rounded-lg bg-rose-400/10 px-3 py-2 text-sm text-rose-200">{error}</p>}
 
         <button disabled={isLoading} type="submit" className="mt-7 flex w-full items-center justify-center rounded-xl bg-cyan-300 px-4 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">
-          {isLoading ? 'Analyzing repo and generating tailored questions...' : 'Build my interview'}
+          {isLoading ? (parsedResumeText ? 'Analyzing repo and generating tailored questions...' : 'Reading and validating resume...') : parsedResumeText ? 'Confirm resume and build interview' : 'Scan resume'}
         </button>
       </form>
     </section>

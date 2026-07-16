@@ -33,9 +33,22 @@ function candidateBasics(resumeText) {
   return { name, email };
 }
 
-function normalizeQuestions(questions) {
+export function normalizeQuestionText(text, repoData, repoUrl) {
+  const question = String(text || 'Explain a technical decision you made in a recent project.');
+  const unsupportedGitPremise = /(?:lack|absence|no|not enough|insufficient)\s+(?:of\s+)?(?:evidence|proof).*\b(?:git|github|repository)\b|\b(?:git|github|repository)\b.*(?:lack|absence|no|not enough|insufficient)\s+(?:of\s+)?(?:evidence|proof)/i.test(question);
+  if (!unsupportedGitPremise) return question;
+
+  const repositoryName = repoData?.repository?.name || 'this project';
+  if (repoUrl || repoData?.repository || repoData?.evidence?.hosted_on_github) {
+    return `How did you use Git and GitHub while developing ${repositoryName}? Describe your version-control workflow, collaboration or review practices, and what you learned.`;
+  }
+
+  return 'If you have used Git or GitHub in your projects, describe your version-control workflow and how it supported your development process.';
+}
+
+function normalizeQuestions(questions, repoData, repoUrl) {
   return questions.map((question) => ({
-    text: question.text,
+    text: normalizeQuestionText(question.text, repoData, repoUrl),
     type: question.type,
     targets: question.targets || [],
     difficulty: question.difficulty
@@ -47,9 +60,44 @@ function requestedQuestionCount(value) {
   return Number.isInteger(count) && count >= 3 && count <= 12 ? count : null;
 }
 
-function guardReportAgainstWeakAnswers(report, answerQuality) {
+function guardAnswerReviews(report, answerQuality) {
+  const weakQuestions = new Map(
+    (answerQuality.weak_questions || []).map(({ questionId, flags }) => [String(questionId), flags])
+  );
+  const sourceReviews = Array.isArray(report.answer_reviews) && report.answer_reviews.length > 0
+    ? report.answer_reviews
+    : [...weakQuestions.entries()].map(([questionId, flags]) => ({
+      question_id: questionId,
+      score: 0,
+      strengths: [],
+      gaps: [`This answer did not provide enough substance (${flags.join(', ')}).`],
+      feedback: 'Use a specific example, explain your decisions, and describe the outcome.',
+      evidence_quote: ''
+    }));
+
+  return sourceReviews.map((review) => {
+    const questionId = String(review.question_id || review.questionId || '');
+    const flags = weakQuestions.get(questionId);
+    if (!flags) return { ...review, question_id: questionId };
+
+    const isCompletelyWeak = answerQuality.substantive_count === 0;
+    const existingGaps = Array.isArray(review.gaps) ? review.gaps : [];
+    return {
+      ...review,
+      question_id: questionId,
+      score: isCompletelyWeak ? 0 : Math.min(Number(review.score) || 0, 40),
+      strengths: [],
+      gaps: [`This answer did not provide enough substance (${flags.join(', ')}).`, ...existingGaps],
+      feedback: 'Use a specific example, explain your decisions, and describe the outcome.',
+      evidence_quote: ''
+    };
+  });
+}
+
+export function guardReportAgainstWeakAnswers(report, answerQuality) {
   const gaps = Array.isArray(report.gaps) ? [...report.gaps] : [];
   const nextSteps = Array.isArray(report.next_steps) ? [...report.next_steps] : [];
+  const answerReviews = guardAnswerReviews(report, answerQuality);
   const warning = `${answerQuality.weak_count} answer${answerQuality.weak_count === 1 ? '' : 's'} did not provide enough substance to verify the candidate's claims.`;
 
   if (answerQuality.substantive_count === 0) {
@@ -58,6 +106,7 @@ function guardReportAgainstWeakAnswers(report, answerQuality) {
       recommended_level: 'Insufficient evidence',
       strengths: [],
       gaps: [warning, ...gaps.filter((gap) => gap !== warning)],
+      answer_reviews: answerReviews,
       next_steps: [
         'Strengthen each resume claim with a specific project example, your individual contribution, and measurable results.',
         'Practice answering each interview question with the situation, your decision, the trade-off you considered, and the outcome.',
@@ -70,7 +119,7 @@ function guardReportAgainstWeakAnswers(report, answerQuality) {
     gaps.unshift(warning);
   }
 
-  return { ...report, gaps, next_steps: nextSteps };
+  return { ...report, gaps, next_steps: nextSteps, answer_reviews: answerReviews };
 }
 
 router.get('/health', (_request, response) => {
@@ -113,8 +162,8 @@ router.post('/sessions', asyncHandler(async (request, response) => {
 
   const normalizedRepoUrl = typeof repoUrl === 'string' ? repoUrl.trim() : '';
   const repoData = await fetchRepoMetadata(normalizedRepoUrl);
-  const analysisResult = await generateCandidateAnalysis(resumeText, repoData, targetRole);
-  const questions = normalizeQuestions(await generateQuestions(analysisResult, count));
+  const analysisResult = await generateCandidateAnalysis(resumeText, repoData, targetRole, normalizedRepoUrl);
+  const questions = normalizeQuestions(await generateQuestions(analysisResult, count, repoData, normalizedRepoUrl), repoData, normalizedRepoUrl);
   const candidate = await Candidate.create({ ...candidateBasics(resumeText), resumeText: resumeText.trim() });
   const session = await Session.create({
     candidateId: candidate._id,
@@ -168,6 +217,30 @@ router.post('/sessions/:id/answer', asyncHandler(async (request, response) => {
   response.status(201).json({ answerId: answer._id, saved: true });
 }));
 
+router.delete('/sessions/:id', asyncHandler(async (request, response) => {
+  if (!requireDatabase(response)) return;
+
+  const { id } = request.params;
+  if (!mongoose.isValidObjectId(id)) {
+    response.status(400).json({ error: 'Invalid session ID.' });
+    return;
+  }
+
+  const session = await Session.findById(id).select('candidateId').lean();
+  if (!session) {
+    response.status(404).json({ error: 'Session not found.' });
+    return;
+  }
+
+  await Promise.all([
+    Answer.deleteMany({ sessionId: id }),
+    Session.deleteOne({ _id: id }),
+    Candidate.deleteOne({ _id: session.candidateId })
+  ]);
+
+  response.json({ deleted: true });
+}));
+
 router.post('/sessions/:id/report', asyncHandler(async (request, response) => {
   if (!requireDatabase(response)) return;
 
@@ -212,7 +285,10 @@ router.post('/sessions/:id/report', asyncHandler(async (request, response) => {
     },
     answerPayload
   );
-  const report = guardReportAgainstWeakAnswers(generatedReport, answerQuality);
+  const report = {
+    ...guardReportAgainstWeakAnswers(generatedReport, answerQuality),
+    answer_quality: answerQuality
+  };
 
   await Session.findByIdAndUpdate(id, { finalReport: report, status: 'completed' });
   response.json(report);

@@ -36,3 +36,7 @@ export function requestReport(sessionId) {
 export function deleteSession(sessionId) {
   return request(`/sessions/${sessionId}`, { method: 'DELETE' });
 }
+
+export function getSession(sessionId) {
+  return request(`/sessions/${sessionId}`);
+}

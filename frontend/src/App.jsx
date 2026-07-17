@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import LandingPage from './components/LandingPage.jsx';
-import InterviewChat from './components/InterviewChat.jsx';
-import ReportView from './components/ReportView.jsx';
-import { deleteSession, requestReport, saveAnswer } from './services/api.js';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import LandingPage from './pages/LandingPage.jsx';
+import InterviewPage from './pages/InterviewPage.jsx';
+import ReportPage from './pages/ReportPage.jsx';
 
-const sessionStorageKey = 'repovet:session';
-const reportStorageKey = 'repovet:report';
 const historyStorageKey = 'repovet:history';
 
 function readStoredJson(key) {
@@ -22,11 +20,21 @@ function writeStoredJson(key, value) {
     if (value === null) window.localStorage.removeItem(key);
     else window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Local storage is optional; the interview still works without it.
+    // Local storage is optional
   }
 }
 
-function AppHeader({ stage }) {
+function AppHeader() {
+  const location = useLocation();
+  const pathname = location.pathname;
+
+  let stage = 'onboarding';
+  if (pathname.startsWith('/interview')) {
+    stage = 'interview';
+  } else if (pathname.startsWith('/report')) {
+    stage = 'report';
+  }
+
   return (
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6 lg:px-8">
       <div className="flex items-center gap-3">
@@ -52,112 +60,22 @@ function AppHeader({ stage }) {
   );
 }
 
-export default function App() {
-  const [session, setSession] = useState(() => readStoredJson(sessionStorageKey));
-  const [report, setReport] = useState(() => readStoredJson(reportStorageKey));
+function AppContent() {
   const [history, setHistory] = useState(() => readStoredJson(historyStorageKey) || []);
-  const [stage, setStage] = useState(() => {
-    if (readStoredJson(reportStorageKey)) return 'report';
-    if (readStoredJson(sessionStorageKey)) return 'interview';
-    return 'onboarding';
-  });
-  const [error, setError] = useState('');
-  const [isReporting, setIsReporting] = useState(false);
 
-  function handleSessionReady(nextSession) {
-    if (!Array.isArray(nextSession?.questions) || nextSession.questions.length === 0) {
-      setError('The server returned no interview questions. Please try again.');
-      return;
-    }
-
-    setError('');
-    setReport(null);
-    setSession(nextSession);
-    writeStoredJson(sessionStorageKey, nextSession);
-    writeStoredJson(reportStorageKey, null);
-    setStage('interview');
+  function handleAddToHistory(newItem) {
+    const nextHistory = [
+      newItem,
+      ...history.filter((item) => item.sessionId !== newItem.sessionId)
+    ].slice(0, 6);
+    setHistory(nextHistory);
+    writeStoredJson(historyStorageKey, nextHistory);
   }
 
-  async function handleAnswer(questionId, answerText) {
-    setError('');
-    await saveAnswer(session.sessionId, questionId, answerText);
-  }
-
-  async function handleInterviewComplete() {
-    setError('');
-    setIsReporting(true);
-    try {
-      const nextReport = await requestReport(session.sessionId);
-      setReport(nextReport);
-      writeStoredJson(reportStorageKey, nextReport);
-      const nextHistory = [
-        {
-          sessionId: session.sessionId,
-          targetRole: session.targetRole,
-          createdAt: new Date().toISOString(),
-          report: nextReport
-        },
-        ...history.filter((item) => item.sessionId !== session.sessionId)
-      ].slice(0, 6);
-      setHistory(nextHistory);
-      writeStoredJson(historyStorageKey, nextHistory);
-      setStage('report');
-    } catch (requestError) {
-      setError(requestError.message);
-      throw requestError;
-    } finally {
-      setIsReporting(false);
-    }
-  }
-
-  async function handleDeleteSession() {
-    if (!session?.sessionId || !window.confirm('Delete this interview, resume, answers, and report permanently?')) return;
-
-    setError('');
-    try {
-      await deleteSession(session.sessionId);
-      setSession(null);
-      setReport(null);
-      const nextHistory = history.filter((item) => item.sessionId !== session.sessionId);
-      setHistory(nextHistory);
-      writeStoredJson(sessionStorageKey, null);
-      writeStoredJson(reportStorageKey, null);
-      writeStoredJson(historyStorageKey, nextHistory);
-      setStage('onboarding');
-    } catch (requestError) {
-      setError(requestError.message);
-    }
-  }
-
-  async function handleCancelInterview() {
-    if (!session?.sessionId) return;
-    setError('');
-    try {
-      await deleteSession(session.sessionId);
-    } catch {
-      // Ignore background cleanup errors, we want to exit locally anyway.
-    }
-    setSession(null);
-    writeStoredJson(sessionStorageKey, null);
-    setStage('onboarding');
-  }
-
-  function openHistoryItem(item) {
-    setSession({ sessionId: item.sessionId, targetRole: item.targetRole, questions: [] });
-    setReport(item.report);
-    writeStoredJson(sessionStorageKey, { sessionId: item.sessionId, targetRole: item.targetRole, questions: [] });
-    writeStoredJson(reportStorageKey, item.report);
-    setError('');
-    setStage('report');
-  }
-
-  function restart() {
-    setSession(null);
-    setReport(null);
-    writeStoredJson(sessionStorageKey, null);
-    writeStoredJson(reportStorageKey, null);
-    setError('');
-    setStage('onboarding');
+  function handleDeleteFromHistory(sessionId) {
+    const nextHistory = history.filter((item) => item.sessionId !== sessionId);
+    setHistory(nextHistory);
+    writeStoredJson(historyStorageKey, nextHistory);
   }
 
   return (
@@ -166,35 +84,22 @@ export default function App() {
         <div className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-cyan-400/5 blur-3xl animate-float-slow" />
         <div className="absolute -right-20 top-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl animate-float-delayed" />
       </div>
-      <AppHeader stage={stage} />
+      <AppHeader />
       <main className="relative mx-auto w-full max-w-6xl px-5 pb-10 lg:px-8">
-        {error && (
-          <div className="mx-auto mb-6 max-w-3xl rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">
-            {error}
-          </div>
-        )}
-
-        {stage === 'onboarding' && (
-          <LandingPage
-            onSessionReady={handleSessionReady}
-            history={history}
-            onOpenHistoryItem={openHistoryItem}
-          />
-        )}
-        {stage === 'interview' && session && (
-          <InterviewChat
-            questions={session.questions}
-            sessionId={session.sessionId}
-            onAnswer={handleAnswer}
-            onFinish={handleInterviewComplete}
-            isFinishing={isReporting}
-            onCancel={handleCancelInterview}
-          />
-        )}
-        {stage === 'report' && report && (
-          <ReportView report={report} targetRole={session?.targetRole} onRestart={restart} onDelete={handleDeleteSession} />
-        )}
+        <Routes>
+          <Route path="/" element={<LandingPage history={history} />} />
+          <Route path="/interview/:sessionId" element={<InterviewPage onAddToHistory={handleAddToHistory} />} />
+          <Route path="/report/:sessionId" element={<ReportPage onDeleteFromHistory={handleDeleteFromHistory} />} />
+        </Routes>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }

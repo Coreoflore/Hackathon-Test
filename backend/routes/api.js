@@ -153,6 +153,35 @@ router.get('/health', (_request, response) => {
   response.json({ ok: true, database: mongoose.connection.readyState === 1 });
 });
 
+router.get('/sessions/:id', asyncHandler(async (request, response) => {
+  if (!requireDatabase(response)) return;
+
+  const { id } = request.params;
+  if (!mongoose.isValidObjectId(id)) {
+    response.status(400).json({ error: 'Invalid session ID.' });
+    return;
+  }
+
+  const session = await Session.findById(id).lean();
+  if (!session) {
+    response.status(404).json({ error: 'Session not found.' });
+    return;
+  }
+
+  const answers = await Answer.find({ sessionId: id }).lean();
+
+  response.json({
+    sessionId: session._id,
+    targetRole: session.targetRole,
+    repoUrls: session.repoUrls,
+    questions: session.questions,
+    finalReport: session.finalReport,
+    status: session.status,
+    answeredCount: answers.length,
+    answers: answers.map(a => ({ questionId: a.questionId, answerText: a.answerText }))
+  });
+}));
+
 router.post('/upload-resume', uploadResume, asyncHandler(async (request, response) => {
   const resumeText = await extractResumeText(request.file);
   const validation = validateResumeText(resumeText);

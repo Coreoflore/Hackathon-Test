@@ -1,10 +1,12 @@
 import { useRef } from 'react';
-import OnboardingForm from './OnboardingForm';
-import SessionHistory from './SessionHistory';
+import { useNavigate } from 'react-router-dom';
+import OnboardingForm from '../components/OnboardingForm';
+import SessionHistory from '../components/SessionHistory';
 
-export default function LandingPage({ onSessionReady, history, onOpenHistoryItem }) {
+export default function LandingPage({ history }) {
   const formRef = useRef(null);
   const featuresRef = useRef(null);
+  const navigate = useNavigate();
 
   function scrollToForm() {
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -12,6 +14,14 @@ export default function LandingPage({ onSessionReady, history, onOpenHistoryItem
 
   function scrollToFeatures() {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleSessionReady(session) {
+    navigate(`/interview/${session.sessionId}`);
+  }
+
+  function handleOpenHistory(item) {
+    navigate(`/report/${item.sessionId}`);
   }
 
   return (
@@ -161,7 +171,7 @@ export default function LandingPage({ onSessionReady, history, onOpenHistoryItem
 
       {/* Start Session Section */}
       <section ref={formRef} className="scroll-mt-12 border-t border-slate-900 pt-16 max-w-4xl mx-auto">
-        <OnboardingForm onSessionReady={onSessionReady} />
+        <OnboardingForm onSessionReady={handleSessionReady} />
       </section>
 
       {/* History section if exists */}
@@ -171,7 +181,7 @@ export default function LandingPage({ onSessionReady, history, onOpenHistoryItem
             <h2 className="text-xl font-semibold text-white">Recent Sessions</h2>
             <p className="mt-1 text-xs text-slate-500">Reopen or review previous candidate evaluation reports.</p>
           </div>
-          <SessionHistory items={history} onOpen={onOpenHistoryItem} />
+          <SessionHistory items={history} onOpen={handleOpenHistory} />
         </section>
       )}
     </div>

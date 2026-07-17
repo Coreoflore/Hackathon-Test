@@ -21,9 +21,9 @@ function removeDraft(sessionId, questionIndex) {
   }
 }
 
-export default function InterviewChat({ questions, sessionId, onAnswer, onFinish, isFinishing, onCancel }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answer, setAnswer] = useState(() => readDraft(sessionId, 0));
+export default function InterviewChat({ questions, sessionId, onAnswer, onFinish, isFinishing, onCancel, initialIndex = 0 }) {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [answer, setAnswer] = useState(() => readDraft(sessionId, initialIndex));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [error, setError] = useState('');

@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk';
 
 const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
-const model = process.env.GROQ_MODEL || 'llama3-70b-8192';
+const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 const timeoutMs = Number(process.env.GROQ_TIMEOUT_MS || 45000);
 
 function clip(value, maxLength = 16000) {
@@ -29,6 +29,89 @@ function parseJson(content) {
     if (start < 0 || end < start) throw new Error('Groq returned invalid JSON.');
     return JSON.parse(cleaned.slice(start, end + 1));
   }
+}
+
+function stringList(value) {
+  return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
+}
+
+function boundedScore(value) {
+  const score = Number(value);
+  return Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0;
+}
+
+function normalizedText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function normalizeAnswerReviews(value, evidenceCorpus) {
+  if (!Array.isArray(value)) return [];
+
+  const corpus = normalizedText(evidenceCorpus);
+  return value.map((review) => {
+    const quote = String(review.evidence_quote || review.evidence || '').trim();
+    const verifiedQuote = quote && corpus.includes(normalizedText(quote)) ? quote : '';
+    return {
+      question_id: String(review.question_id ?? review.questionId ?? ''),
+      score: boundedScore(review.score),
+      strengths: stringList(review.strengths),
+      gaps: stringList(review.gaps),
+      feedback: String(review.feedback || 'Use a specific example, explain your decisions, and describe the outcome.'),
+      evidence_quote: verifiedQuote
+    };
+  }).filter((review) => review.question_id);
+}
+
+function normalizeEvidence(value, evidenceCorpus) {
+  if (!Array.isArray(value)) return [];
+
+  const corpus = normalizedText(evidenceCorpus);
+  return value.map((item) => {
+    const source = ['resume', 'github', 'answer'].includes(String(item.source).toLowerCase())
+      ? String(item.source).toLowerCase()
+      : 'answer';
+    const quote = String(item.quote || '').trim();
+    return {
+      claim: String(item.claim || ''),
+      source,
+      detail: String(item.detail || ''),
+      quote: quote && corpus.includes(normalizedText(quote)) ? quote : ''
+    };
+  }).filter((item) => item.claim && item.detail);
+}
+
+export function normalizeFinalReport(result, sessionData = {}, answersArray = []) {
+  const repoDataList = Array.isArray(sessionData.repoData) ? sessionData.repoData : [sessionData.repoData].filter(Boolean);
+  
+  const corpusElements = [
+    sessionData.candidate?.resumeText,
+    ...repoDataList.flatMap(data => [
+      data?.readme,
+      data?.repository?.name,
+      data?.repository?.fullName,
+      data?.repository?.description,
+      ...(data?.repository?.topics || [])
+    ]),
+    ...answersArray.map((answer) => answer.answerText)
+  ];
+
+  const evidenceCorpus = corpusElements
+    .map((value) => typeof value === 'string' ? value : '')
+    .filter(Boolean)
+    .join('\n');
+
+  return {
+    recommended_level: String(result.recommended_level || 'Needs further review'),
+    strengths: stringList(result.strengths),
+    gaps: stringList(result.gaps),
+    undefended_project: {
+      name: String(result.undefended_project?.name || 'No project identified'),
+      reason: String(result.undefended_project?.reason || 'The answers did not provide enough evidence to defend a specific project.')
+    },
+    next_steps: stringList(result.next_steps),
+    answer_reviews: normalizeAnswerReviews(result.answer_reviews, evidenceCorpus),
+    evidence: normalizeEvidence(result.evidence, evidenceCorpus)
+  };
 }
 
 async function requestJson(system, user) {
@@ -66,10 +149,10 @@ async function requestJson(system, user) {
   }
 }
 
-export async function generateCandidateAnalysis(resumeText, repoData, targetRole) {
+export async function generateCandidateAnalysis(resumeText, repoData, targetRole, repoUrl = '') {
   const result = await requestJson(
     'You are a rigorous technical recruiter. Return only valid JSON with exactly these keys: skills_claimed (array), skills_evidenced (array), projects (array), flags (array). Do not add markdown or commentary.',
-    `Analyze this candidate for the target role: ${targetRole}\n\nRESUME:\n${clip(resumeText)}\n\nGITHUB REPOSITORY DATA:\n${clip(repoData, 18000)}\n\nDistinguish skills merely claimed on the resume from skills evidenced by repository details. Identify concrete projects and any inconsistencies or verification flags.`
+    `Analyze this candidate for the target role: ${targetRole}. A submitted GitHub URL is evidence that a repository link was provided and, when metadata loads, that the repository is hosted on GitHub. It is not by itself proof of the candidate's personal Git command usage, ownership, or contribution history. Do not describe a repository as having a "lack of GitHub evidence" when repository metadata, languages, a README, or a submitted URL exists.\n\nRESUME:\n${clip(resumeText)}\n\nSUBMITTED REPOSITORY URL:\n${clip(repoUrl)}\n\nGITHUB REPOSITORY DATA:\n${clip(repoData, 18000)}\n\nDistinguish skills merely claimed on the resume from skills evidenced by repository details. Identify concrete projects and any inconsistencies or verification flags.`
   );
 
   return {
@@ -80,18 +163,23 @@ export async function generateCandidateAnalysis(resumeText, repoData, targetRole
   };
 }
 
-export async function generateQuestions(analysisJson) {
-  const result = await requestJson(
-    'You are an expert interviewer. Return only valid JSON in the shape {"questions":[...]}. The questions array must contain exactly 6 objects. Every object must have text, type, targets (array), and difficulty.',
-    `Using this grounded candidate analysis, create exactly six interview questions that test whether the candidate can defend their claims. Mix technical, behavioral, project-deep-dive, and verification questions. Make each question specific and answerable.\n\nANALYSIS:\n${clip(analysisJson, 14000)}`
-  );
-
-  const questions = Array.isArray(result) ? result : result.questions;
-  if (!Array.isArray(questions) || questions.length < 6) {
-    throw new Error('Groq did not return six interview questions.');
+export async function generateQuestions(analysisJson, questionCount = Number(process.env.QUESTION_COUNT || 6), repoData = {}, repoUrl = '') {
+  const count = Number(questionCount);
+  if (!Number.isInteger(count) || count < 3 || count > 12) {
+    throw new Error('Question count must be an integer between 3 and 12.');
   }
 
-  return questions.slice(0, 6).map((question) => ({
+  const result = await requestJson(
+    'You are an expert interviewer. Return only valid JSON in the shape {"questions":[...]}. Every question object must have text, type, targets (array), and difficulty.',
+    `Using this grounded candidate analysis and the original repository context, create exactly ${count} interview questions that test whether the candidate can defend their claims. Mix technical, behavioral, project-deep-dive, and verification questions where the count allows. Make each question specific and answerable. A submitted GitHub URL is positive evidence that a repository was provided. If repository metadata loaded, treat the repository, languages, README, and commit/contributor counts as available evidence. Do not write questions with unsupported premises such as "given the lack of evidence in your GitHub repository" when a repository URL or repository metadata exists. For Git/GitHub questions, ask neutrally about how the candidate used Git/GitHub in the project; do not assume either proficiency or lack of proficiency.\n\nANALYSIS:\n${clip(analysisJson, 14000)}\n\nSUBMITTED REPOSITORY URL:\n${clip(repoUrl)}\n\nREPOSITORY CONTEXT:\n${clip(repoData, 18000)}`
+  );
+
+  const questions = Array.isArray(result) ? result : result?.questions;
+  if (!Array.isArray(questions) || questions.length === 0) {
+    throw new Error('Groq did not return any interview questions.');
+  }
+
+  return questions.slice(0, count).map((question) => ({
     text: String(question.text || 'Explain a technical decision you made in a recent project.'),
     type: String(question.type || 'technical'),
     targets: Array.isArray(question.targets) ? question.targets.map(String) : [],
@@ -101,18 +189,9 @@ export async function generateQuestions(analysisJson) {
 
 export async function generateFinalReport(sessionData, answersArray) {
   const result = await requestJson(
-    'You are a hiring manager writing a concise, evidence-based interview report. Return only valid JSON with exactly these keys: recommended_level (string), strengths (array), gaps (array), undefended_project (object with name and reason strings), next_steps (array). You must explicitly identify the project that was least defended by the answers; never leave undefended_project vague.',
-    `Evaluate the candidate against the target role and the original evidence. Treat unsupported claims and weak answers as gaps.\n\nSESSION AND ORIGINAL CONTEXT:\n${clip(sessionData, 24000)}\n\nANSWERS:\n${clip(answersArray, 18000)}`
+    'You are a hiring manager writing a concise, evidence-based interview report. Return only valid JSON with exactly these keys: recommended_level (string), strengths (array), gaps (array), undefended_project (object with name and reason strings), next_steps (array), answer_reviews (array), evidence (array). You must explicitly identify the project that was least defended by the answers; never leave undefended_project vague. The next_steps array must be candidate-facing coaching for the person who submitted the resume and answered the interview questions, not instructions for the interviewer or hiring team. Write every next step directly to the candidate in the second person (for example, "Clarify...", "Add...", or "Practice..."). Never tell an interviewer to ask, probe, reject, advance, or schedule the candidate. Each answer_reviews item must have question_id (which must be the exact 0-based string index of the question, e.g. "0", "1", "2"), score (0-100), strengths (array), gaps (array), feedback (string), and evidence_quote (string). Each evidence item must have claim, source (resume, github, or answer), detail, and quote. Quotes must be exact excerpts from the supplied evidence; do not invent or paraphrase quotes.',
+    `Evaluate the candidate against the target role, original resume/repository evidence, and every answer. Treat unsupported claims and weak answers as gaps. The session context includes a deterministic answerQuality summary; treat it as authoritative evidence quality. If substantive_count is zero, do not report any strengths. Return 3-6 actionable candidate-facing next steps. Include resume-focused guidance for claims, project details, or missing evidence and answer-focused guidance for specificity, ownership, decisions, trade-offs, or measurable outcomes whenever those issues appear in the evidence. For answer_reviews, evaluate each question using the matching answer and score the answer itself, not the resume. For evidence, include only claims directly supported by the supplied material.\n\nSESSION AND ORIGINAL CONTEXT:\n${clip(sessionData, 24000)}\n\nANSWERS:\n${clip(answersArray, 18000)}`
   );
 
-  return {
-    recommended_level: String(result.recommended_level || 'Needs further review'),
-    strengths: Array.isArray(result.strengths) ? result.strengths : [],
-    gaps: Array.isArray(result.gaps) ? result.gaps : [],
-    undefended_project: {
-      name: String(result.undefended_project?.name || 'No project identified'),
-      reason: String(result.undefended_project?.reason || 'The answers did not provide enough evidence to defend a specific project.')
-    },
-    next_steps: Array.isArray(result.next_steps) ? result.next_steps : []
-  };
+  return normalizeFinalReport(result, sessionData, answersArray);
 }

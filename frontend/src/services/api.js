@@ -13,11 +13,11 @@ export async function uploadResume(file) {
   return request('/upload-resume', { method: 'POST', body: formData });
 }
 
-export function createSession({ resumeText, repoUrl, targetRole }) {
+export function createSession({ resumeText, repoUrls, targetRole, questionCount }) {
   return request('/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ resumeText, repoUrl, targetRole })
+    body: JSON.stringify({ resumeText, repoUrls, targetRole, questionCount })
   });
 }
 
@@ -31,4 +31,12 @@ export function saveAnswer(sessionId, questionId, answerText) {
 
 export function requestReport(sessionId) {
   return request(`/sessions/${sessionId}/report`, { method: 'POST' });
+}
+
+export function deleteSession(sessionId) {
+  return request(`/sessions/${sessionId}`, { method: 'DELETE' });
+}
+
+export function getSession(sessionId) {
+  return request(`/sessions/${sessionId}`);
 }

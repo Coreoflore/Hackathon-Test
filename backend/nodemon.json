@@ -1,0 +1,5 @@
+{
+  "watch": ["."],
+  "ignore": ["node_modules", "tests", "*.test.js", "coverage"],
+  "ext": "js,json"
+}

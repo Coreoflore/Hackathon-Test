@@ -1,4 +1,25 @@
+import dns from 'node:dns';
 import mongoose from 'mongoose';
+
+function configureMongoDns() {
+  if (!process.env.MONGODB_URI?.startsWith('mongodb+srv://')) return;
+
+  const servers = (process.env.MONGODB_DNS_SERVERS || '1.1.1.1,8.8.8.8')
+    .split(',')
+    .map((server) => server.trim())
+    .filter(Boolean);
+
+  if (servers.length === 0) return;
+
+  try {
+    dns.setServers(servers);
+    console.log(`MongoDB DNS servers configured: ${servers.join(', ')}`);
+  } catch (error) {
+    console.warn(`Could not configure MongoDB DNS servers: ${error.message}`);
+  }
+}
+
+configureMongoDns();
 
 export async function connectDB() {
   const mongoUri = process.env.MONGODB_URI;

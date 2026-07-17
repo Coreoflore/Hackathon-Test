@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createSession, uploadResume } from '../services/api.js';
 
 const roles = [
@@ -12,12 +12,28 @@ const roles = [
 
 export default function OnboardingForm({ onSessionReady }) {
   const [file, setFile] = useState(null);
-  const [repoUrls, setRepoUrls] = useState(['']);
+  const [repoUrls, setRepoUrls] = useState(['https://github.com/']);
   const [targetRole, setTargetRole] = useState(roles[0]);
   const [questionCount, setQuestionCount] = useState(6);
   const [parsedResumeText, setParsedResumeText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -42,7 +58,9 @@ export default function OnboardingForm({ onSessionReady }) {
       return;
     }
 
-    const filteredRepoUrls = repoUrls.map(url => url.trim()).filter(Boolean);
+    const filteredRepoUrls = repoUrls
+      .map(url => url.trim())
+      .filter((url) => url && url !== 'https://github.com/');
 
     setError('');
     setIsLoading(true);
@@ -76,14 +94,14 @@ export default function OnboardingForm({ onSessionReady }) {
 
   function addRepoUrl() {
     if (repoUrls.length < 5) {
-      setRepoUrls([...repoUrls, '']);
+      setRepoUrls([...repoUrls, 'https://github.com/']);
     }
   }
 
   function removeRepoUrl(index) {
     const newRepoUrls = [...repoUrls];
     newRepoUrls.splice(index, 1);
-    if (newRepoUrls.length === 0) newRepoUrls.push('');
+    if (newRepoUrls.length === 0) newRepoUrls.push('https://github.com/');
     setRepoUrls(newRepoUrls);
   }
 
@@ -190,9 +208,48 @@ export default function OnboardingForm({ onSessionReady }) {
 
           <label className="block text-sm text-slate-300">
             Target role
-            <select value={targetRole} onChange={(event) => setTargetRole(event.target.value)} className="input-field mt-2">
-              {roles.map((role) => <option key={role}>{role}</option>)}
-            </select>
+            <div ref={dropdownRef} className="relative mt-2">
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-200 transition hover:border-cyan-300/60 focus:border-cyan-300 focus:outline-none"
+              >
+                <span>{targetRole}</span>
+                <svg
+                  className={`h-4 w-4 text-slate-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-cyan-300' : ''}`}
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isDropdownOpen && (
+                <ul className="absolute z-20 mt-2 max-h-60 w-full overflow-auto no-scrollbar rounded-xl border border-white/10 bg-slate-900 p-1.5 shadow-2xl shadow-slate-950/80 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150">
+                  {roles.map((role) => (
+                    <li key={role}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTargetRole(role);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                          targetRole === role
+                            ? 'bg-cyan-300 text-slate-950 font-semibold'
+                            : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        {role}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </label>
 
           <label className="block text-sm text-slate-300">

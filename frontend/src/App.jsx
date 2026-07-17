@@ -129,6 +129,19 @@ export default function App() {
     }
   }
 
+  async function handleCancelInterview() {
+    if (!session?.sessionId) return;
+    setError('');
+    try {
+      await deleteSession(session.sessionId);
+    } catch {
+      // Ignore background cleanup errors, we want to exit locally anyway.
+    }
+    setSession(null);
+    writeStoredJson(sessionStorageKey, null);
+    setStage('onboarding');
+  }
+
   function openHistoryItem(item) {
     setSession({ sessionId: item.sessionId, targetRole: item.targetRole, questions: [] });
     setReport(item.report);
@@ -175,6 +188,7 @@ export default function App() {
             onAnswer={handleAnswer}
             onFinish={handleInterviewComplete}
             isFinishing={isReporting}
+            onCancel={handleCancelInterview}
           />
         )}
         {stage === 'report' && report && (

@@ -57,3 +57,12 @@ button, input, select, textarea { font: inherit; }
 .animate-float-delayed {
   animation: float-delayed 25s ease-in-out infinite;
 }
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

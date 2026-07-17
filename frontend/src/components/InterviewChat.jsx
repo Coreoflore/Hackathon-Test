@@ -21,10 +21,11 @@ function removeDraft(sessionId, questionIndex) {
   }
 }
 
-export default function InterviewChat({ questions, sessionId, onAnswer, onFinish, isFinishing }) {
+export default function InterviewChat({ questions, sessionId, onAnswer, onFinish, isFinishing, onCancel }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answer, setAnswer] = useState(() => readDraft(sessionId, 0));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
   const [error, setError] = useState('');
   const questionList = Array.isArray(questions) ? questions : [];
   const totalQuestions = questionList.length;
@@ -91,18 +92,11 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
         <p className="text-sm text-slate-500">Question {currentIndex + 1} of {totalQuestions}</p>
       </div>
 
-      <div
-        className="mb-8 h-1.5 overflow-hidden rounded-full bg-slate-800"
-        role="progressbar"
-        aria-label="Interview progress"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        aria-valuenow={Math.round(progress)}
-      >
-        <div className="h-full rounded-full bg-cyan-300 transition-[width] duration-500" style={{ width: `${progress}%` }} />
+      <div className="h-1 w-full overflow-hidden rounded-full bg-slate-800">
+        <div className="h-full bg-gradient-to-r from-cyan-300 to-indigo-400 transition-all duration-300" style={{ width: `${progress}%` }} />
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-6 shadow-glow sm:p-10">
+      <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.045] p-6 shadow-glow sm:p-10">
         <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.15em] text-slate-500">
           <span className="rounded-full bg-cyan-300/10 px-3 py-1.5 text-cyan-200">{question.type || 'technical'}</span>
           <span className="rounded-full bg-slate-800 px-3 py-1.5">{question.difficulty || 'medium'} difficulty</span>
@@ -128,9 +122,48 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
           <button disabled={isSubmitting || isFinishing} className="mt-6 w-full rounded-xl bg-cyan-300 px-4 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60" type="submit">
             {isFinishing ? 'Writing your report...' : isSubmitting ? 'Saving answer...' : isLastQuestion ? 'Finish interview' : 'Submit answer'}
           </button>
+          <button
+            type="button"
+            disabled={isSubmitting || isFinishing}
+            onClick={() => setShowExitModal(true)}
+            className="mt-3 w-full rounded-xl border border-slate-800 bg-slate-950/20 px-4 py-3.5 text-sm font-semibold text-slate-400 transition hover:border-slate-700 hover:text-white hover:bg-slate-900/40 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Cancel and Exit
+          </button>
         </form>
       </div>
       <p className="mt-5 text-center text-xs text-slate-600">Specific examples are more useful than perfect answers.</p>
+
+      {/* Exit confirmation modal */}
+      {showExitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-semibold text-white">Exit Interview?</h3>
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              Are you sure you want to exit? Your answers entered so far will be lost and this session will be permanently deleted.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowExitModal(false)}
+                className="rounded-xl border border-slate-700 bg-slate-950/20 px-4 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:text-white"
+              >
+                Go Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExitModal(false);
+                  onCancel();
+                }}
+                className="rounded-xl bg-rose-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-rose-400 hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]"
+              >
+                Yes, Exit Session
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -54,7 +54,9 @@ export function evaluateAnswerText(answerText) {
     score -= 65;
   }
 
-  const weakPhrase = /^(i\s+don't\s+know|i\s+am\s+not\s+sure|not\s+sure|no\s+idea)[.!]?$/i.test(text);
+  const cleanedText = text.replace(/[^a-z0-9'\s]/gi, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const weakPhrase = /^(i\s+(?:don't|do\s+not|dont)\s+(?:really\s+|fucking\s+)*know|idk|dunno|no\s+idea|no\s+clue|not\s+sure|i\s+am\s+not\s+sure|dont\s+know|skip|pass)$/i.test(cleanedText) ||
+    /^(i\s+(?:don't|do\s+not|dont)\s+(?:really\s+|fucking\s+)*know|idk|dunno|no\s+idea|no\s+clue|dont\s+know)/i.test(cleanedText);
   if (weakPhrase) {
     flags.push('weak_answer');
     score -= 45;

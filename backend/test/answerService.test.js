@@ -28,3 +28,10 @@ test('summarizes weak and substantive answers separately', () => {
   assert.equal(summary.weak_count, 1);
   assert.deepEqual(summary.weak_questions[0].questionId, '0');
 });
+
+test('flags casual/filler brush-off answers as weak and non-substantive', () => {
+  const quality = evaluateAnswerText("I don't really fucking know, so yeah!");
+
+  assert.equal(quality.substantive, false);
+  assert.ok(quality.flags.includes('weak_answer'));
+});

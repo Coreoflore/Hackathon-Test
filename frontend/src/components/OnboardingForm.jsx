@@ -97,7 +97,7 @@ export default function OnboardingForm({ onSessionReady }) {
     <section className="grid gap-8 py-10 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:py-20">
       <div className="max-w-xl">
         <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
-          Grounded technical interviews
+          Repovet technical interviews
         </p>
         <h1 className="text-4xl font-semibold leading-tight tracking-tight text-white sm:text-6xl">
           Turn a resume into a conversation worth having.

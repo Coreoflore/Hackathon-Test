@@ -102,15 +102,38 @@ export function guardReportAgainstWeakAnswers(report, answerQuality) {
   const gaps = Array.isArray(report.gaps) ? [...report.gaps] : [];
   const nextSteps = Array.isArray(report.next_steps) ? [...report.next_steps] : [];
   const answerReviews = guardAnswerReviews(report, answerQuality);
-  const warning = `${answerQuality.weak_count} answer${answerQuality.weak_count === 1 ? '' : 's'} did not provide enough substance to verify the candidate's claims.`;
 
-  if (answerQuality.substantive_count === 0) {
+  const weakQuestions = new Map(
+    (answerQuality.weak_questions || []).map(({ questionId, flags }) => [String(questionId), flags])
+  );
+
+  let weakCount = 0;
+  let substantiveCount = 0;
+
+  const processedReviews = answerReviews.map((review) => {
+    const questionId = String(review.question_id || '');
+    const isLocalWeak = weakQuestions.has(questionId);
+    const score = Number(review.score) || 0;
+    const isWeak = isLocalWeak || score < 40;
+
+    if (isWeak) {
+      weakCount++;
+    } else {
+      substantiveCount++;
+    }
+
+    return review;
+  });
+
+  const warning = `${weakCount} answer${weakCount === 1 ? '' : 's'} did not provide enough substance to verify the candidate's claims.`;
+
+  if (substantiveCount === 0) {
     return {
       ...report,
       recommended_level: 'Insufficient evidence',
       strengths: [],
       gaps: [warning, ...gaps.filter((gap) => gap !== warning)],
-      answer_reviews: answerReviews,
+      answer_reviews: processedReviews,
       next_steps: [
         'Strengthen each resume claim with a specific project example, your individual contribution, and measurable results.',
         'Practice answering each interview question with the situation, your decision, the trade-off you considered, and the outcome.',
@@ -119,11 +142,11 @@ export function guardReportAgainstWeakAnswers(report, answerQuality) {
     };
   }
 
-  if (answerQuality.weak_count > 0 && !gaps.includes(warning)) {
-    gaps.unshift(warning);
-  }
+  const updatedGaps = (weakCount > 0 && !gaps.includes(warning))
+    ? [warning, ...gaps]
+    : gaps;
 
-  return { ...report, gaps, next_steps: nextSteps, answer_reviews: answerReviews };
+  return { ...report, gaps: updatedGaps, next_steps: nextSteps, answer_reviews: processedReviews };
 }
 
 router.get('/health', (_request, response) => {

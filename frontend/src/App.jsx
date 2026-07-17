@@ -4,9 +4,9 @@ import InterviewChat from './components/InterviewChat.jsx';
 import ReportView from './components/ReportView.jsx';
 import { deleteSession, requestReport, saveAnswer } from './services/api.js';
 
-const sessionStorageKey = 'grounded-interviewer:session';
-const reportStorageKey = 'grounded-interviewer:report';
-const historyStorageKey = 'grounded-interviewer:history';
+const sessionStorageKey = 'repovet:session';
+const reportStorageKey = 'repovet:report';
+const historyStorageKey = 'repovet:history';
 
 function readStoredJson(key) {
   try {
@@ -34,7 +34,7 @@ function AppHeader({ stage }) {
           ◈
         </div>
         <div>
-          <p className="font-semibold tracking-tight text-white">Grounded Interviewer</p>
+          <p className="font-semibold tracking-tight text-white">Repovet</p>
           <p className="text-xs text-slate-500">Evidence over guesswork</p>
         </div>
       </div>

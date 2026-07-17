@@ -1,6 +1,6 @@
-# Grounded Interviewer
+# Repovet
 
-Grounded Interviewer turns a candidate's resume and public GitHub repository into a tailored six-question interview and a hiring-manager-style report.
+Repovet turns a candidate's resume and public GitHub repository into a tailored interview and a hiring-manager-style report.
 
 ## Project structure
 

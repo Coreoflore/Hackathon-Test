@@ -12,7 +12,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/', (_request, response) => {
-  response.json({ name: 'Grounded Interviewer API', health: '/api/health' });
+  response.json({ name: 'Repovet API', health: '/api/health' });
 });
 
 app.use('/api', apiRouter);
@@ -35,5 +35,5 @@ app.use((error, _request, response, _next) => {
 await connectDB();
 
 app.listen(port, () => {
-  console.log(`Grounded Interviewer API listening on http://localhost:${port}`);
+  console.log(`Repovet API listening on http://localhost:${port}`);
 });

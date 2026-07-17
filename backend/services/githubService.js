@@ -49,7 +49,7 @@ export async function fetchRepoMetadata(repoUrl) {
 
   const headers = {
     Accept: 'application/vnd.github+json',
-    'User-Agent': 'grounded-interviewer'
+    'User-Agent': 'repovet'
   };
 
   if (process.env.GITHUB_TOKEN) {

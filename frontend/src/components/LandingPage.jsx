@@ -36,7 +36,7 @@ export default function LandingPage({ onSessionReady, history, onOpenHistoryItem
 
         {/* Subtitle */}
         <p className="mt-8 max-w-2xl text-base leading-8 text-slate-400 sm:text-lg">
-          Grounded Interviewer matches candidate resumes against their actual GitHub code repositories. It dynamically generates defensive interview questions that challenge candidates to prove what they build.
+          Repovet matches candidate resumes against their actual GitHub code repositories. It dynamically generates defensive interview questions that challenge candidates to prove what they build.
         </p>
 
         {/* CTA Buttons */}

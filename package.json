@@ -1,7 +1,7 @@
 {
   "name": "hackathon-test",
   "version": "1.0.0",
-  "description": "Grounded Interviewer turns a candidate's resume and public GitHub repository into a tailored six-question interview and a hiring-manager-style report.",
+  "description": "Repovet turns a candidate's resume and public GitHub repository into a tailored interview and a hiring-manager-style report.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

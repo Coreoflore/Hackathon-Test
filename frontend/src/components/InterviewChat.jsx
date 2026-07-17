@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 function draftKey(sessionId, questionIndex) {
-  return `grounded-interviewer:draft:${sessionId}:${questionIndex}`;
+  return `repovet:draft:${sessionId}:${questionIndex}`;
 }
 
 function readDraft(sessionId, questionIndex) {

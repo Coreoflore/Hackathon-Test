@@ -151,11 +151,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-ink text-slate-200">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-cyan-400/5 blur-3xl" />
-        <div className="absolute -right-20 top-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-cyan-400/5 blur-3xl animate-float-slow" />
+        <div className="absolute -right-20 top-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl animate-float-delayed" />
       </div>
       <AppHeader stage={stage} />
-      <main className="relative mx-auto w-full max-w-6xl px-5 pb-16 lg:px-8">
+      <main className="relative mx-auto w-full max-w-6xl px-5 pb-10 lg:px-8">
         {error && (
           <div className="mx-auto mb-6 max-w-3xl rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">
             {error}

@@ -81,7 +81,7 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
   }
 
   return (
-    <section className="mx-auto max-w-3xl py-8 sm:py-16">
+    <section className="mx-auto max-w-3xl">
       <div className="mb-9 flex items-end justify-between">
         <div>
           <p className="text-sm font-medium text-cyan-200">Live interview</p>

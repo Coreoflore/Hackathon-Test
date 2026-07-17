@@ -12,7 +12,7 @@ const roles = [
 
 export default function OnboardingForm({ onSessionReady }) {
   const [file, setFile] = useState(null);
-  const [repoUrl, setRepoUrl] = useState('');
+  const [repoUrls, setRepoUrls] = useState(['']);
   const [targetRole, setTargetRole] = useState(roles[0]);
   const [questionCount, setQuestionCount] = useState(6);
   const [parsedResumeText, setParsedResumeText] = useState('');
@@ -42,6 +42,8 @@ export default function OnboardingForm({ onSessionReady }) {
       return;
     }
 
+    const filteredRepoUrls = repoUrls.map(url => url.trim()).filter(Boolean);
+
     setError('');
     setIsLoading(true);
     try {
@@ -51,8 +53,8 @@ export default function OnboardingForm({ onSessionReady }) {
         return;
       }
 
-      const session = await createSession({ resumeText: parsedResumeText, repoUrl, targetRole, questionCount: parsedQuestionCount });
-      onSessionReady({ ...session, repoUrl, targetRole, questionCount: parsedQuestionCount });
+      const session = await createSession({ resumeText: parsedResumeText, repoUrls: filteredRepoUrls, targetRole, questionCount: parsedQuestionCount });
+      onSessionReady({ ...session, repoUrls: filteredRepoUrls, targetRole, questionCount: parsedQuestionCount });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -70,6 +72,25 @@ export default function OnboardingForm({ onSessionReady }) {
     setFile(null);
     setParsedResumeText('');
     setError('');
+  }
+
+  function addRepoUrl() {
+    if (repoUrls.length < 5) {
+      setRepoUrls([...repoUrls, '']);
+    }
+  }
+
+  function removeRepoUrl(index) {
+    const newRepoUrls = [...repoUrls];
+    newRepoUrls.splice(index, 1);
+    if (newRepoUrls.length === 0) newRepoUrls.push('');
+    setRepoUrls(newRepoUrls);
+  }
+
+  function updateRepoUrl(index, value) {
+    const newRepoUrls = [...repoUrls];
+    newRepoUrls[index] = value;
+    setRepoUrls(newRepoUrls);
   }
 
   return (
@@ -124,10 +145,48 @@ export default function OnboardingForm({ onSessionReady }) {
             </div>
           )}
 
-          <label className="block text-sm text-slate-300">
-            GitHub repository <span className="text-slate-600">(optional)</span>
-            <input value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)} type="url" placeholder="https://github.com/you/project" className="input-field mt-2" />
-          </label>
+          <div className="block text-sm text-slate-300">
+            <span className="mb-2 block">GitHub repositories <span className="text-slate-600">(optional)</span></span>
+            <div className="space-y-3">
+              {repoUrls.map((url, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    value={url}
+                    onChange={(event) => updateRepoUrl(index, event.target.value)}
+                    type="url"
+                    placeholder="https://github.com/you/project"
+                    className="input-field flex-1"
+                  />
+                  {repoUrls.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeRepoUrl(index)}
+                      className="shrink-0 rounded-lg p-2 text-slate-500 transition hover:bg-white/5 hover:text-white"
+                      title="Remove repository"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {repoUrls.length < 5 && (
+              <button
+                type="button"
+                onClick={addRepoUrl}
+                className="mt-3 text-xs font-medium text-cyan-400 transition hover:text-cyan-300 flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add another repository
+              </button>
+            )}
+          </div>
 
           <label className="block text-sm text-slate-300">
             Target role
@@ -148,9 +207,10 @@ export default function OnboardingForm({ onSessionReady }) {
         {error && <p className="mt-5 rounded-lg bg-rose-400/10 px-3 py-2 text-sm text-rose-200">{error}</p>}
 
         <button disabled={isLoading} type="submit" className="mt-7 flex w-full items-center justify-center rounded-xl bg-cyan-300 px-4 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60">
-          {isLoading ? (parsedResumeText ? 'Analyzing repo and generating tailored questions...' : 'Reading and validating resume...') : parsedResumeText ? 'Confirm resume and build interview' : 'Scan resume'}
+          {isLoading ? (parsedResumeText ? 'Analyzing repos and generating tailored questions...' : 'Reading and validating resume...') : parsedResumeText ? 'Confirm resume and build interview' : 'Scan resume'}
         </button>
       </form>
     </section>
   );
 }
+

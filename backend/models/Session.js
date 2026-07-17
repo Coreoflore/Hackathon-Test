@@ -13,9 +13,9 @@ const questionSchema = new mongoose.Schema(
 const sessionSchema = new mongoose.Schema(
   {
     candidateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Candidate', required: true },
-    repoUrl: { type: String, trim: true, default: '' },
+    repoUrls: { type: [String], default: [] },
     targetRole: { type: String, trim: true, required: true },
-    repoData: { type: mongoose.Schema.Types.Mixed, default: {} },
+    repoData: { type: mongoose.Schema.Types.Mixed, default: [] },
     analysisResult: { type: mongoose.Schema.Types.Mixed, default: {} },
     questions: { type: [questionSchema], default: [] },
     finalReport: { type: mongoose.Schema.Types.Mixed, default: null },

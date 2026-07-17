@@ -33,22 +33,26 @@ function candidateBasics(resumeText) {
   return { name, email };
 }
 
-export function normalizeQuestionText(text, repoData, repoUrl) {
+export function normalizeQuestionText(text, repoData, repoUrls) {
   const question = String(text || 'Explain a technical decision you made in a recent project.');
   const unsupportedGitPremise = /(?:lack|absence|no|not enough|insufficient)\s+(?:of\s+)?(?:evidence|proof).*\b(?:git|github|repository)\b|\b(?:git|github|repository)\b.*(?:lack|absence|no|not enough|insufficient)\s+(?:of\s+)?(?:evidence|proof)/i.test(question);
   if (!unsupportedGitPremise) return question;
 
-  const repositoryName = repoData?.repository?.name || 'this project';
-  if (repoUrl || repoData?.repository || repoData?.evidence?.hosted_on_github) {
+  const firstRepoData = Array.isArray(repoData) ? repoData[0] : repoData;
+  const repositoryName = firstRepoData?.repository?.name || 'this project';
+  const hasRepoUrl = Array.isArray(repoUrls) ? repoUrls.length > 0 : !!repoUrls;
+  const hasGithub = firstRepoData?.repository || firstRepoData?.evidence?.hosted_on_github;
+
+  if (hasRepoUrl || hasGithub) {
     return `How did you use Git and GitHub while developing ${repositoryName}? Describe your version-control workflow, collaboration or review practices, and what you learned.`;
   }
 
   return 'If you have used Git or GitHub in your projects, describe your version-control workflow and how it supported your development process.';
 }
 
-function normalizeQuestions(questions, repoData, repoUrl) {
+function normalizeQuestions(questions, repoData, repoUrls) {
   return questions.map((question) => ({
-    text: normalizeQuestionText(question.text, repoData, repoUrl),
+    text: normalizeQuestionText(question.text, repoData, repoUrls),
     type: question.type,
     targets: question.targets || [],
     difficulty: question.difficulty
@@ -138,7 +142,7 @@ router.post('/upload-resume', uploadResume, asyncHandler(async (request, respons
 }));
 
 router.post('/sessions', asyncHandler(async (request, response) => {
-  const { resumeText, repoUrl = '', targetRole, questionCount } = request.body || {};
+  const { resumeText, repoUrls = [], repoUrl = '', targetRole, questionCount } = request.body || {};
   if (typeof resumeText !== 'string' || !resumeText.trim()) {
     response.status(400).json({ error: 'resumeText is required.' });
     return;
@@ -160,20 +164,28 @@ router.post('/sessions', asyncHandler(async (request, response) => {
   }
   if (!requireDatabase(response)) return;
 
-  const normalizedRepoUrl = typeof repoUrl === 'string' ? repoUrl.trim() : '';
-  const repoData = await fetchRepoMetadata(normalizedRepoUrl);
-  if (repoData && repoData.error) {
-    response.status(400).json({ error: repoData.error });
+  let normalizedRepoUrls = [];
+  if (Array.isArray(repoUrls) && repoUrls.length > 0) {
+    normalizedRepoUrls = repoUrls.map(url => typeof url === 'string' ? url.trim() : '').filter(Boolean);
+  } else if (typeof repoUrl === 'string' && repoUrl.trim()) {
+    normalizedRepoUrls = [repoUrl.trim()];
+  }
+
+  const repoDataList = await Promise.all(normalizedRepoUrls.map(url => fetchRepoMetadata(url)));
+  const failedRepo = repoDataList.find(data => data && data.error);
+  if (failedRepo) {
+    response.status(400).json({ error: failedRepo.error });
     return;
   }
-  const analysisResult = await generateCandidateAnalysis(resumeText, repoData, targetRole, normalizedRepoUrl);
-  const questions = normalizeQuestions(await generateQuestions(analysisResult, count, repoData, normalizedRepoUrl), repoData, normalizedRepoUrl);
+
+  const analysisResult = await generateCandidateAnalysis(resumeText, repoDataList, targetRole, normalizedRepoUrls);
+  const questions = normalizeQuestions(await generateQuestions(analysisResult, count, repoDataList, normalizedRepoUrls), repoDataList, normalizedRepoUrls);
   const candidate = await Candidate.create({ ...candidateBasics(resumeText), resumeText: resumeText.trim() });
   const session = await Session.create({
     candidateId: candidate._id,
-    repoUrl: normalizedRepoUrl,
+    repoUrls: normalizedRepoUrls,
     targetRole: targetRole.trim(),
-    repoData,
+    repoData: repoDataList,
     analysisResult,
     questions,
     status: 'ready'
@@ -276,7 +288,7 @@ router.post('/sessions/:id/report', asyncHandler(async (request, response) => {
   const generatedReport = await generateFinalReport(
     {
       targetRole: session.targetRole,
-      repoUrl: session.repoUrl,
+      repoUrls: session.repoUrls,
       repoData: session.repoData,
       analysisResult: session.analysisResult,
       questions: session.questions,

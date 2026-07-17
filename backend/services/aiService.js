@@ -81,13 +81,17 @@ function normalizeEvidence(value, evidenceCorpus) {
 }
 
 export function normalizeFinalReport(result, sessionData = {}, answersArray = []) {
+  const repoDataList = Array.isArray(sessionData.repoData) ? sessionData.repoData : [sessionData.repoData].filter(Boolean);
+  
   const corpusElements = [
     sessionData.candidate?.resumeText,
-    sessionData.repoData?.readme,
-    sessionData.repoData?.repository?.name,
-    sessionData.repoData?.repository?.fullName,
-    sessionData.repoData?.repository?.description,
-    ...(sessionData.repoData?.repository?.topics || []),
+    ...repoDataList.flatMap(data => [
+      data?.readme,
+      data?.repository?.name,
+      data?.repository?.fullName,
+      data?.repository?.description,
+      ...(data?.repository?.topics || [])
+    ]),
     ...answersArray.map((answer) => answer.answerText)
   ];
 

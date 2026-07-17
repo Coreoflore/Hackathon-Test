@@ -112,12 +112,12 @@ export default function OnboardingForm({ onSessionReady }) {
   }
 
   return (
-    <section className="grid gap-8 py-10 lg:grid-cols-[1.35fr_1fr] lg:items-center lg:py-20">
+    <section className="grid gap-8 py-10 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:py-20">
       <div className="max-w-xl">
         <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
           Repovet technical interviews
         </p>
-        <h1 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
+        <h1 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-[42px]">
           Turn a resume into a conversation worth having.
         </h1>
         <p className="mt-6 max-w-lg text-base leading-8 text-slate-400">

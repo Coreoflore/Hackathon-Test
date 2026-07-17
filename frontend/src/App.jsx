@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import OnboardingForm from './components/OnboardingForm.jsx';
+import LandingPage from './components/LandingPage.jsx';
 import InterviewChat from './components/InterviewChat.jsx';
 import ReportView from './components/ReportView.jsx';
-import SessionHistory from './components/SessionHistory.jsx';
 import { deleteSession, requestReport, saveAnswer } from './services/api.js';
 
 const sessionStorageKey = 'grounded-interviewer:session';
@@ -163,10 +162,11 @@ export default function App() {
         )}
 
         {stage === 'onboarding' && (
-          <>
-            <OnboardingForm onSessionReady={handleSessionReady} />
-            <SessionHistory items={history} onOpen={openHistoryItem} />
-          </>
+          <LandingPage
+            onSessionReady={handleSessionReady}
+            history={history}
+            onOpenHistoryItem={openHistoryItem}
+          />
         )}
         {stage === 'interview' && session && (
           <InterviewChat

@@ -3,6 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import { connectDB } from './config/db.js';
 import apiRouter from './routes/api.js';
+import { sendErrorToDiscord } from './services/discordService.js';
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
@@ -17,7 +18,9 @@ app.get('/', (_request, response) => {
 
 app.use('/api', apiRouter);
 
-app.use((error, _request, response, _next) => {
+app.use((error, request, response, _next) => {
+  const statusCode = error.statusCode || 500;
+
   if (error.code === 'LIMIT_FILE_SIZE') {
     response.status(413).json({ error: 'Resume files must be smaller than 10 MB.' });
     return;
@@ -29,7 +32,28 @@ app.use((error, _request, response, _next) => {
   }
 
   console.error(error);
-  response.status(error.statusCode || 500).json({ error: error.message || 'Unexpected server error.' });
+
+  // Alert Discord on internal server errors (500)
+  if (statusCode >= 500) {
+    sendErrorToDiscord(error, {
+      path: request.path,
+      method: request.method,
+      context: 'Express Routing Error'
+    });
+  }
+
+  response.status(statusCode).json({ error: error.message || 'Unexpected server error.' });
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  sendErrorToDiscord(error, { context: 'Uncaught Exception' });
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  sendErrorToDiscord(error, { context: 'Unhandled Promise Rejection' });
 });
 
 await connectDB();

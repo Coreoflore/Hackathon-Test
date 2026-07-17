@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import MarkdownRenderer from './MarkdownRenderer.jsx';
 
 function ListSection({ title, items, className = '' }) {
   return (
@@ -8,7 +9,7 @@ function ListSection({ title, items, className = '' }) {
         {items.length > 0 ? items.map((item, index) => (
           <li key={`${item}-${index}`} className="flex gap-3 text-sm leading-6 text-slate-300">
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
-            <span>{String(item)}</span>
+            <span><MarkdownRenderer text={String(item)} className="inline" /></span>
           </li>
         )) : <li className="text-sm text-slate-500">No items were returned.</li>}
       </ul>
@@ -46,7 +47,7 @@ function AnswerReviewSection({ reviews }) {
               <h3 className="font-medium text-white">Question {Number(review.question_id) + 1}</h3>
               <ScoreBar score={review.score} />
             </div>
-            {review.feedback && <p className="mt-4 text-sm leading-6 text-slate-300">{review.feedback}</p>}
+            {review.feedback && <MarkdownRenderer text={review.feedback} className="mt-4 text-sm leading-6 text-slate-300" />}
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {Array.isArray(review.strengths) && review.strengths.length > 0 && (
                 <ListSection title="What worked" items={review.strengths} className="border-emerald-300/10 bg-emerald-300/[0.04]" />
@@ -56,7 +57,7 @@ function AnswerReviewSection({ reviews }) {
               )}
             </div>
             {review.evidence_quote && (
-              <blockquote className="mt-4 border-l-2 border-cyan-300/40 pl-3 text-xs leading-5 text-slate-500">“{review.evidence_quote}”</blockquote>
+              <blockquote className="mt-4 border-l-2 border-cyan-300/40 pl-3 text-xs leading-5 text-slate-500 font-mono">“<MarkdownRenderer text={review.evidence_quote} className="inline" />”</blockquote>
             )}
           </article>
         ))}
@@ -78,8 +79,8 @@ function EvidenceSection({ evidence }) {
               <span className="rounded-full bg-cyan-300/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-200">{item.source}</span>
               <h3 className="text-sm font-medium text-white">{item.claim}</h3>
             </div>
-            <p className="mt-2 text-sm leading-6 text-slate-300">{item.detail}</p>
-            {item.quote && <blockquote className="mt-3 border-l-2 border-cyan-300/40 pl-3 text-xs leading-5 text-slate-500">“{item.quote}”</blockquote>}
+            <MarkdownRenderer text={item.detail} className="mt-2 text-sm leading-6 text-slate-300" />
+            {item.quote && <blockquote className="mt-3 border-l-2 border-cyan-300/40 pl-3 text-xs leading-5 text-slate-500 font-mono">“<MarkdownRenderer text={item.quote} className="inline" />”</blockquote>}
           </article>
         ))}
       </div>
@@ -133,7 +134,7 @@ export default function ReportView({ report, targetRole, onRestart, onDelete }) 
           <span className="text-xs text-rose-200/60">Least defended project</span>
         </div>
         <h2 className="mt-5 text-2xl font-semibold text-white">{undefendedProject.name || 'No project identified'}</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-rose-100/80">{undefendedProject.reason || 'The answers did not provide enough evidence to defend a specific project.'}</p>
+        <MarkdownRenderer text={undefendedProject.reason || 'The answers did not provide enough evidence to defend a specific project.'} className="mt-3 max-w-3xl text-sm leading-7 text-rose-100/80" />
       </section>}
 
       {viewMode === 'candidate' && <div className="mt-6">

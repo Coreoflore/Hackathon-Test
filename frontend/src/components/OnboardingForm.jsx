@@ -112,21 +112,30 @@ export default function OnboardingForm({ onSessionReady }) {
   }
 
   return (
-    <section className="grid gap-8 py-10 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:py-20">
+    <section className="grid gap-8 py-10 lg:grid-cols-[1.35fr_1fr] lg:items-center lg:py-20">
       <div className="max-w-xl">
         <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
           Repovet technical interviews
         </p>
-        <h1 className="text-4xl font-semibold leading-tight tracking-tight text-white sm:text-6xl">
+        <h1 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
           Turn a resume into a conversation worth having.
         </h1>
         <p className="mt-6 max-w-lg text-base leading-8 text-slate-400">
           We compare what a candidate claims with what their work demonstrates, then build a focused interview around the gaps that matter.
         </p>
-        <div className="mt-9 grid max-w-md grid-cols-3 gap-3 text-xs text-slate-500">
-          <div className="border-l border-slate-700 pl-3"><span className="mb-1 block text-xl text-cyan-200">01</span>Resume signal</div>
-          <div className="border-l border-slate-700 pl-3"><span className="mb-1 block text-xl text-cyan-200">02</span>Repo evidence</div>
-          <div className="border-l border-slate-700 pl-3"><span className="mb-1 block text-xl text-cyan-200">03</span>Clear verdict</div>
+        <div className="mt-9 grid max-w-md grid-cols-1 gap-3 text-xs text-slate-400 sm:grid-cols-3 sm:text-[11px]">
+          <div className="rounded-xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-3 transition hover:border-cyan-500/20">
+            <span className="mb-1 block text-lg font-bold text-cyan-300">01</span>
+            <span className="font-medium text-slate-400">Resume signal</span>
+          </div>
+          <div className="rounded-xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-3 transition hover:border-cyan-500/20">
+            <span className="mb-1 block text-lg font-bold text-cyan-300">02</span>
+            <span className="font-medium text-slate-400">Repo evidence</span>
+          </div>
+          <div className="rounded-xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-3 transition hover:border-cyan-500/20">
+            <span className="mb-1 block text-lg font-bold text-cyan-300">03</span>
+            <span className="font-medium text-slate-400">Clear verdict</span>
+          </div>
         </div>
       </div>
 
@@ -140,12 +149,37 @@ export default function OnboardingForm({ onSessionReady }) {
         <div className="space-y-5">
           <label className="block text-sm text-slate-300">
             Resume
-            <span className="mt-2 flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-slate-600 bg-slate-950/40 px-4 py-4 transition hover:border-cyan-300/60">
-              <span className="min-w-0">
-                <span className="block truncate font-medium text-slate-200">{file ? file.name : 'Upload PDF or DOCX'}</span>
-                <span className="mt-1 block text-xs text-slate-500">Maximum file size: 10 MB</span>
+            <span className={`mt-2 flex cursor-pointer items-center justify-between rounded-xl border border-dashed px-4 py-4 transition-all ${
+              file 
+                ? 'border-emerald-500/40 bg-emerald-500/[0.03] hover:border-emerald-400/60' 
+                : 'border-slate-600 bg-slate-950/40 hover:border-cyan-300/60'
+            }`}>
+              <span className="flex items-center gap-3 min-w-0">
+                {file ? (
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </span>
+                ) : (
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-800 text-slate-400 shrink-0">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                  </span>
+                )}
+                <span className="min-w-0">
+                  <span className="block truncate font-medium text-slate-200">{file ? file.name : 'Upload PDF or DOCX'}</span>
+                  <span className="mt-0.5 block text-2xs text-slate-500">Maximum file size: 10 MB</span>
+                </span>
               </span>
-              <span className="ml-4 rounded-lg bg-slate-800 px-3 py-2 text-xs text-slate-300">Browse</span>
+              <span className={`ml-4 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                file 
+                  ? 'bg-emerald-500/10 text-emerald-300' 
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}>
+                {file ? 'Change' : 'Browse'}
+              </span>
               <input className="sr-only" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleFileChange} />
             </span>
           </label>
@@ -168,21 +202,28 @@ export default function OnboardingForm({ onSessionReady }) {
             <div className="space-y-3">
               {repoUrls.map((url, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <input
-                    value={url}
-                    onChange={(event) => updateRepoUrl(index, event.target.value)}
-                    type="url"
-                    placeholder="https://github.com/you/project"
-                    className="input-field flex-1"
-                  />
+                  <div className="relative flex-1">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
+                      <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z" />
+                      </svg>
+                    </span>
+                    <input
+                      value={url}
+                      onChange={(event) => updateRepoUrl(index, event.target.value)}
+                      type="url"
+                      placeholder="https://github.com/you/project"
+                      className="input-field flex-1 pl-10"
+                    />
+                  </div>
                   {repoUrls.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeRepoUrl(index)}
-                      className="shrink-0 rounded-lg p-2 text-slate-500 transition hover:bg-white/5 hover:text-white"
+                      className="shrink-0 rounded-lg p-2.5 text-slate-500 transition hover:bg-white/5 hover:text-white"
                       title="Remove repository"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
@@ -255,7 +296,7 @@ export default function OnboardingForm({ onSessionReady }) {
           <label className="block text-sm text-slate-300">
             Interview length
             <span className="mt-2 flex items-center gap-3">
-              <input value={questionCount} onChange={(event) => setQuestionCount(event.target.value)} type="number" min="3" max="12" step="1" className="input-field" />
+              <input value={questionCount} onChange={(event) => setQuestionCount(event.target.value)} type="number" min="3" max="12" step="1" className="input-field w-24" />
               <span className="shrink-0 text-xs text-slate-500">questions · choose 3–12</span>
             </span>
           </label>

@@ -111,7 +111,7 @@ export default function ReportView({ report, targetRole, onRestart, onDelete }) 
         </div>
       </div>
 
-      <div className="mb-6 rounded-3xl border border-cyan-300/20 bg-cyan-300/10 p-6 sm:p-8">
+      <div className="mb-6 rounded-3xl border border-cyan-300/20 bg-cyan-300/10 p-5 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Overall verdict</p>
         <p className="mt-4 text-3xl font-semibold text-white sm:text-4xl">{report.recommended_level || 'Needs further review'}</p>
         {Number.isFinite(Number(answerQuality.answered_count)) && <p className="mt-4 text-xs font-medium uppercase tracking-[0.14em] text-cyan-100/70">Answer evidence: {answerQuality.substantive_count || 0} of {answerQuality.answered_count} answers contained enough substance</p>}

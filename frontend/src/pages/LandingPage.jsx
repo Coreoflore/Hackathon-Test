@@ -38,7 +38,7 @@ export default function LandingPage({ history }) {
 
         {/* Title */}
         <h1 className="mt-8 text-4xl font-bold tracking-tight text-white sm:text-7xl leading-[1.1] max-w-4xl font-sans">
-          Verify engineering depth. <br />
+          Verify engineering depth. <br className="hidden sm:inline" />
           <span className="bg-gradient-to-r from-cyan-300 via-teal-200 to-indigo-300 bg-clip-text text-transparent">
             No guessing, just evidence.
           </span>
@@ -137,7 +137,7 @@ export default function LandingPage({ history }) {
         </div>
 
         <div className="grid gap-6 mt-12 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 text-left hover:border-white/10 transition-all">
+          <div className="rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.03] to-transparent p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-cyan-500/20 hover:bg-cyan-500/[0.015] hover:shadow-[0_8px_30px_rgba(6,182,212,0.02)]">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-300/10 text-cyan-200 text-lg border border-cyan-300/20">
               ◈
             </div>
@@ -147,7 +147,7 @@ export default function LandingPage({ history }) {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 text-left hover:border-white/10 transition-all">
+          <div className="rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.03] to-transparent p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-teal-500/20 hover:bg-teal-500/[0.015] hover:shadow-[0_8px_30px_rgba(20,184,166,0.02)]">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-teal-300/10 text-teal-200 text-lg border border-teal-300/20">
               ⚡
             </div>
@@ -157,7 +157,7 @@ export default function LandingPage({ history }) {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 text-left hover:border-white/10 transition-all">
+          <div className="rounded-2xl border border-white/5 bg-gradient-to-b from-white/[0.03] to-transparent p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-indigo-500/20 hover:bg-indigo-500/[0.015] hover:shadow-[0_8px_30px_rgba(99,102,241,0.02)]">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-300/10 text-indigo-200 text-lg border border-indigo-300/20">
               ✦
             </div>
@@ -177,10 +177,6 @@ export default function LandingPage({ history }) {
       {/* History section if exists */}
       {history && history.length > 0 && (
         <section className="border-t border-slate-900 pt-16 max-w-4xl mx-auto">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-white">Recent Sessions</h2>
-            <p className="mt-1 text-xs text-slate-500">Reopen or review previous candidate evaluation reports.</p>
-          </div>
           <SessionHistory items={history} onOpen={handleOpenHistory} />
         </section>
       )}

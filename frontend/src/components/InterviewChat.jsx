@@ -199,7 +199,7 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
         <div className="h-full bg-gradient-to-r from-cyan-300 to-indigo-400 transition-all duration-300" style={{ width: `${progress}%` }} />
       </div>
 
-      <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.045] p-6 shadow-glow sm:p-10">
+      <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.045] p-5 shadow-glow sm:p-10">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
           <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.15em] text-slate-500">
             <span className="rounded-full bg-cyan-300/10 px-3 py-1.5 text-cyan-200">{question.type || 'technical'}</span>
@@ -238,7 +238,7 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
         {question.targets?.length > 0 && <p className="mt-5 text-sm text-slate-500">Looking for evidence of: {question.targets.join(', ')}</p>}
 
         <form onSubmit={handleSubmit} className="mt-9">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <label className="block text-sm font-medium text-slate-300" htmlFor="answer">Your answer</label>
             <span className="text-xs text-slate-600">{answer.trim().length} characters · saved locally</span>
           </div>

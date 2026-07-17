@@ -153,6 +153,8 @@ router.get('/health', (_request, response) => {
   response.json({ ok: true, database: mongoose.connection.readyState === 1 });
 });
 
+
+
 router.get('/sessions/:id', asyncHandler(async (request, response) => {
   if (!requireDatabase(response)) return;
 

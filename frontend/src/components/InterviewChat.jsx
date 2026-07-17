@@ -27,6 +27,9 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
   const [error, setError] = useState('');
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [voices, setVoices] = useState([]);
+
   const questionList = Array.isArray(questions) ? questions : [];
   const totalQuestions = questionList.length;
   const question = questionList[currentIndex];
@@ -34,6 +37,106 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
   const progress = totalQuestions > 0
     ? Math.min(100, Math.max(0, ((currentIndex + 1) / totalQuestions) * 100))
     : 0;
+
+  useEffect(() => {
+    const loadVoices = () => {
+      if (window.speechSynthesis) {
+        setVoices(window.speechSynthesis.getVoices());
+      }
+    };
+
+    loadVoices();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    window.speechSynthesis?.cancel();
+    setIsPlayingAudio(false);
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+  }, [currentIndex]);
+
+  function handleSpeak() {
+    if (!window.speechSynthesis) {
+      alert('Text-to-speech is not supported in this browser.');
+      return;
+    }
+
+    if (isPlayingAudio) {
+      window.speechSynthesis.cancel();
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const cleanText = (question?.text || '')
+      .replace(/[`*_#~\[\]]/g, '')
+      .replace(/https?:\/\/[^\s]+/g, 'link');
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+
+    // Keywords indicating male voices
+    const maleKeywords = ['male', 'guy', 'david', 'mark', 'george', 'ryan', 'thomas', 'stefan', 'christopher', 'eric', 'james', 'richard'];
+
+    const scoredVoices = voices
+      .filter(v => v.lang.toLowerCase().startsWith('en'))
+      .map(v => {
+        let score = 0;
+        const name = v.name.toLowerCase();
+
+        // 1. Strongly prioritize male voices
+        const isMale = maleKeywords.some(keyword => name.includes(keyword));
+        if (isMale) {
+          score += 200;
+        }
+
+        // 2. Prioritize Natural/Neural high-fidelity voices
+        if (name.includes('natural')) {
+          score += 100;
+        }
+
+        // 3. Prioritize Google / Siri voices
+        if (name.includes('google') || name.includes('siri')) {
+          score += 50;
+        }
+
+        // 4. Accent preferences
+        if (v.lang.toLowerCase() === 'en-us') {
+          score += 10;
+        } else if (v.lang.toLowerCase() === 'en-gb') {
+          score += 5;
+        }
+
+        return { voice: v, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const preferredVoice = scoredVoices.length > 0 ? scoredVoices[0].voice : null;
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    // Professional measured pacing and slightly deeper male tone
+    utterance.rate = 0.90;
+    utterance.pitch = 0.97;
+
+    utterance.onend = () => setIsPlayingAudio(false);
+    utterance.onerror = () => setIsPlayingAudio(false);
+
+    setIsPlayingAudio(true);
+    window.speechSynthesis.speak(utterance);
+  }
 
   useEffect(() => {
     if (!sessionId) return;
@@ -97,9 +200,37 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
       </div>
 
       <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.045] p-6 shadow-glow sm:p-10">
-        <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.15em] text-slate-500">
-          <span className="rounded-full bg-cyan-300/10 px-3 py-1.5 text-cyan-200">{question.type || 'technical'}</span>
-          <span className="rounded-full bg-slate-800 px-3 py-1.5">{question.difficulty || 'medium'} difficulty</span>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
+          <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.15em] text-slate-500">
+            <span className="rounded-full bg-cyan-300/10 px-3 py-1.5 text-cyan-200">{question.type || 'technical'}</span>
+            <span className="rounded-full bg-slate-800 px-3 py-1.5">{question.difficulty || 'medium'} difficulty</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleSpeak}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+              isPlayingAudio 
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:bg-rose-500/30' 
+                : 'bg-cyan-300/10 text-cyan-300 border border-cyan-500/20 hover:bg-cyan-300/20'
+            }`}
+            title={isPlayingAudio ? 'Stop reading' : 'Read question'}
+          >
+            {isPlayingAudio ? (
+              <>
+                <svg className="h-3.5 w-3.5 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                </svg>
+                Stop Listening
+              </>
+            ) : (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M12 18.75V5.25L7.5 9H4.5v6h3L12 18.75z" />
+                </svg>
+                Listen to Question
+              </>
+            )}
+          </button>
         </div>
         <div className="mt-7 text-2xl font-medium leading-relaxed text-white sm:text-3xl" role="heading" aria-level="2">
           <MarkdownRenderer text={question.text} />

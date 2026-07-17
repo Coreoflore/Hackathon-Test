@@ -45,3 +45,34 @@ export async function sendErrorToDiscord(error, context = {}) {
     console.error('Failed to send error alert to Discord Webhook:', err);
   }
 }
+
+export async function sendLogToDiscord(title, description, fields = [], color = 3447003) {
+  const webhookUrl = process.env.DISCORD_LOGS_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  const environment = process.env.NODE_ENV || 'development';
+
+  const embed = {
+    title: `${title} [${environment.toUpperCase()}]`,
+    description,
+    color,
+    fields,
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ embeds: [embed] }),
+    });
+
+    if (!response.ok) {
+      console.error(`Discord logs webhook returned status ${response.status}`);
+    }
+  } catch (err) {
+    console.error('Failed to send activity log to Discord Webhook:', err);
+  }
+}

@@ -11,6 +11,7 @@ import {
   generateFinalReport,
   generateQuestions
 } from '../services/aiService.js';
+import { sendLogToDiscord } from '../services/discordService.js';
 
 const router = express.Router();
 
@@ -245,6 +246,17 @@ router.post('/sessions', asyncHandler(async (request, response) => {
     status: 'ready'
   });
 
+  sendLogToDiscord(
+    '🟢 Interview Session Initialized',
+    `A new candidate screening session has been created.`,
+    [
+      { name: 'Target Role', value: targetRole.trim(), inline: true },
+      { name: 'Questions count', value: `${questions.length}`, inline: true },
+      { name: 'Repositories', value: `${normalizedRepoUrls.length || 'None'} linked`, inline: true }
+    ],
+    3066993
+  );
+
   response.status(201).json({
     sessionId: session._id,
     questionCount: questions.length,
@@ -284,6 +296,17 @@ router.post('/sessions/:id/answer', asyncHandler(async (request, response) => {
     { $set: { answerText: answerText.trim(), timestamp: new Date() } },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
+
+  sendLogToDiscord(
+    '💬 Answer Submitted',
+    `Candidate submitted an answer to Question ${questionIndex + 1}.`,
+    [
+      { name: 'Session ID', value: id, inline: true },
+      { name: 'Progress', value: `${questionIndex + 1} of ${session.questions.length}`, inline: true }
+    ],
+    15105570
+  );
+
   response.status(201).json({ answerId: answer._id, saved: true });
 }));
 
@@ -361,6 +384,18 @@ router.post('/sessions/:id/report', asyncHandler(async (request, response) => {
   };
 
   await Session.findByIdAndUpdate(id, { finalReport: report, status: 'completed' });
+
+  sendLogToDiscord(
+    '🏆 Interview Session Completed',
+    `Candidate finished the assessment and a hiring report was generated.`,
+    [
+      { name: 'Target Role', value: session.targetRole || 'Engineer', inline: true },
+      { name: 'Recommended Level', value: report.recommended_level || 'N/A', inline: true },
+      { name: 'Evidence Score', value: `${answerQuality.substantive_count} of ${answerQuality.answered_count} answers verified`, inline: true }
+    ],
+    3447003
+  );
+
   response.json(report);
 }));
 

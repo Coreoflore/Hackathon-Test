@@ -15,7 +15,7 @@ function readBackendPort() {
   }
 }
 
-const apiTarget = process.env.VITE_API_URL || `http://127.0.0.1:${readBackendPort()}`;
+const apiTarget = process.env.VITE_API_URL || `http://localhost:${readBackendPort()}`;
 
 export default defineConfig({
   plugins: [react()],
@@ -29,8 +29,12 @@ export default defineConfig({
         proxyTimeout: 120000,
         agent: new http.Agent({ keepAlive: false }),
         configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
+          proxy.on('error', (err, _req, res) => {
             console.warn('Vite proxy error:', err.message);
+            if (!res.headersSent) {
+              res.writeHead(502, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: `Backend connection failed (${err.message}). Make sure the backend is running.` }));
+            }
           });
         }
       }

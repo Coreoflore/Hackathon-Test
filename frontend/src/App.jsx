@@ -38,9 +38,7 @@ function AppHeader() {
   return (
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6 lg:px-8">
       <div className="flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-lg text-cyan-200">
-          ◈
-        </div>
+        <img src="/favicon.jpg" alt="Repovet Logo" className="h-10 w-10 rounded-xl object-cover" />
         <div>
           <p className="font-semibold tracking-tight text-white">Repovet</p>
           <p className="text-xs text-slate-500">Evidence over guesswork</p>

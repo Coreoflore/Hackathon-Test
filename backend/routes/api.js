@@ -62,7 +62,7 @@ function normalizeQuestions(questions, repoData, repoUrls) {
 
 function requestedQuestionCount(value) {
   const count = value === undefined ? Number(process.env.QUESTION_COUNT || 6) : Number(value);
-  return Number.isInteger(count) && count >= 3 && count <= 12 ? count : null;
+  return Number.isInteger(count) && count >= 3 && count <= 10 ? count : null;
 }
 
 function guardAnswerReviews(report, answerQuality) {
@@ -214,7 +214,7 @@ router.post('/sessions', asyncHandler(async (request, response) => {
 
   const count = requestedQuestionCount(questionCount);
   if (!count) {
-    response.status(400).json({ error: 'questionCount must be an integer between 3 and 12.' });
+    response.status(400).json({ error: 'questionCount must be an integer between 3 and 10.' });
     return;
   }
   if (!requireDatabase(response)) return;

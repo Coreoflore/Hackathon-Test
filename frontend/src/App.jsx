@@ -58,6 +58,21 @@ function AppHeader() {
   );
 }
 
+function AppFooter() {
+  return (
+    <footer className="mt-20 border-t border-slate-900/80 py-8 text-center text-xs text-slate-500">
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p className="flex items-center gap-1.5 font-medium text-slate-400">
+          Made with <span className="text-rose-500">❤️</span> by <span className="text-cyan-300 font-semibold">Team Cadence</span>
+        </p>
+        <p className="text-slate-600">
+          Repovet &copy; {new Date().getFullYear()}
+        </p>
+      </div>
+    </footer>
+  );
+}
+
 function AppContent() {
   const [history, setHistory] = useState(() => readStoredJson(historyStorageKey) || []);
 
@@ -77,26 +92,29 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-ink text-slate-200 overflow-x-hidden">
+    <div className="min-h-screen bg-ink text-slate-200 overflow-x-hidden flex flex-col justify-between">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-cyan-400/5 blur-3xl animate-float-slow" />
         <div className="absolute -right-20 top-1/3 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl animate-float-delayed" />
       </div>
-      <AppHeader />
-      <main className="relative mx-auto w-full max-w-6xl px-5 pb-10 lg:px-8">
-        <Routes>
-          <Route path="/" element={<LandingPage history={history} />} />
-          <Route path="/interview/:sessionId" element={<InterviewPage onAddToHistory={handleAddToHistory} />} />
-          <Route path="/report/:sessionId" element={<ReportPage onDeleteFromHistory={handleDeleteFromHistory} />} />
-          <Route path="*" element={
-            <div className="mx-auto max-w-2xl py-24 text-center">
-              <h1 className="text-6xl font-bold text-white">404</h1>
-              <p className="mt-4 text-lg text-slate-400">This page doesn't exist.</p>
-              <a href="/" className="mt-8 inline-block rounded-xl bg-cyan-300 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">Go Home</a>
-            </div>
-          } />
-        </Routes>
-      </main>
+      <div>
+        <AppHeader />
+        <main className="relative mx-auto w-full max-w-6xl px-5 pb-10 lg:px-8">
+          <Routes>
+            <Route path="/" element={<LandingPage history={history} />} />
+            <Route path="/interview/:sessionId" element={<InterviewPage onAddToHistory={handleAddToHistory} />} />
+            <Route path="/report/:sessionId" element={<ReportPage onDeleteFromHistory={handleDeleteFromHistory} />} />
+            <Route path="*" element={
+              <div className="mx-auto max-w-2xl py-24 text-center">
+                <h1 className="text-6xl font-bold text-white">404</h1>
+                <p className="mt-4 text-lg text-slate-400">This page doesn't exist.</p>
+                <a href="/" className="mt-8 inline-block rounded-xl bg-cyan-300 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">Go Home</a>
+              </div>
+            } />
+          </Routes>
+        </main>
+      </div>
+      <AppFooter />
     </div>
   );
 }

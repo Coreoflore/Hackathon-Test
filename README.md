@@ -1,14 +1,35 @@
-# ◈ Repovet
+# ◈ Repovet — AI-Powered Technical Interview Prep Platform
 
-**"Evidence over guesswork."**  
-Repovet turns a candidate's resume and public GitHub repositories into a tailored, defensive technical interview and an evidence-backed hiring report. Built for technical recruiters and hiring managers who want to cut through resume inflation and verify actual engineering depth.
+<div align="center">
+
+  ![Repovet Banner](frontend/public/og-image.jpg)
+
+  ### **"Ace your technical interview. Turn your projects into practice."**
+
+  [![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)](https://opensource.org/licenses/MIT)
+  [![Stack: React + Vite](https://img.shields.io/badge/Frontend-React%20%7C%20Vite-61DAFB.svg)](https://vitejs.dev/)
+  [![Backend: Node.js + Express](https://img.shields.io/badge/Backend-Node.js%20%7C%20Express-68A063.svg)](https://nodejs.org/)
+  [![Database: MongoDB Atlas](https://img.shields.io/badge/Database-MongoDB%20Atlas-47A248.svg)](https://www.mongodb.com/atlas)
+
+  [Features](#-key-features) • [How It Works](#-how-it-works)
+
+</div>
 
 ---
 
-## 💡 The Problem
-In technical hiring, resumes are often padded with buzzwords, frameworks, and databases that the candidate may have barely touched. On the other side, hiring managers spend hours conducting standard whiteboard interviews or reviewing complex repositories manually. 
+> [!NOTE]
+> **Built by Team Cadence:** Repovet bridges the gap between generic LeetCode grinding and real-world technical interviews. By analyzing a candidate's **resume claims** alongside their **actual GitHub repository source code**, Repovet generates realistic, role-tailored interview practice and feedback.
 
-**Repovet solves this.** It parses the candidate's resume, cross-references it with their actual GitHub code repositories, identifies verification gaps, conducts a tailored technical interview, and delivers a clean verdict.
+---
+
+## 💡 The Problem vs. The Repovet Solution
+
+| Traditional Tech Interview Prep | ◈ Repovet Project-Grounded Practice |
+| :--- | :--- |
+| **Generic LeetCode Grinding:** Hundreds of hours spent solving abstract puzzles unrelated to real work. | **Grounded in Your Actual Code:** Practice explaining and defending the custom hooks, API endpoints, and schemas you built. |
+| **One-Size-Fits-All Questions:** Irrelevant questions that ignore your target position. | **Role-Tailored Blueprints:** Customized question depth for Cybersecurity, DevOps, Full-Stack, AI, or Student roles. |
+| **Silent Text Questions:** Static text boxes with no audio context. | **Audio Read-Aloud (TTS):** Click the speaker button to hear questions spoken aloud, simulating a real interview room. |
+| **No Actionable Roadmap:** Binary pass/fail results with no guidance on how to improve. | **Detailed Feedback Report:** Comprehensive readiness score, architectural strengths, and targeted study roadmap. |
 
 ---
 
@@ -16,117 +37,42 @@ In technical hiring, resumes are often padded with buzzwords, frameworks, and da
 
 ```mermaid
 graph TD
-    A[Upload Resume PDF/DOCX] --> B(Extract Claims & Projects)
-    C[Enter GitHub Repository URLs] --> D(Fetch Repository Metadata & Readme)
-    B --> E{Groq AI Engine}
-    D --> E
-    E --> F[Generate Grounded Interview Questions]
-    F --> G[Dynamic Interview Session]
-    G --> H[Analyze Answer Quality & Specificity]
-    H --> I[Compile Executive Evidence Report]
+    A[Upload Resume PDF/DOCX] --> B(Extract Resume Claims & Skills)
+    C[Enter GitHub Repo URLs] --> D(Fetch Source Code & Readmes)
+    E[Select/Type Target Role] --> F{AI Question Engine}
+    B --> F
+    D --> F
+    F --> G[Generate Role-Tailored Questions]
+    G --> H[Interactive AI Practice Session]
+    H --> I(Listen via Audio TTS Read-Aloud)
+    H --> J(Type Technical Answers)
+    J --> K[AI Response Evaluation]
+    K --> L[Generate Technical Readiness Report]
 ```
 
-1. **Upload & Parse:** The candidate uploads their resume (PDF/DOCX) and inputs their public GitHub repository link(s).
-2. **Ground & Align:** Repovet parses resume claims and fetches public metadata, languages, and readmes from the provided GitHub repositories.
-3. **Tailored Interview:** An LLM-powered engine (Llama-3.3-70b via Groq) generates 3–12 customized questions testing the specific overlaps (or gaps) between claims and repositories.
-4. **Answer Validation:** The candidate answers questions in real-time, which are analyzed for specificity, technical substance, and code alignment.
-5. **Verdict & Next Steps:** An executive report details verified strengths, evidence gaps, a placement recommendation, and actionable growth tips for the candidate.
+1. **Resume & GitHub Fusion:** Upload your resume (PDF/DOCX) and link public GitHub repositories. Repovet parses your listed experience and inspects actual source code, commit history, and framework setups.
+2. **Role Blueprinting:** Choose or type any target role (e.g. *Cybersecurity Engineer*, *DevOps*, *Full-Stack*, or *Student*).
+3. **Session Builder:** An animated loading screen provides real-time progress as AI constructs a personalized 3–12 question interview roadmap.
+4. **Interactive Practice Chat:** Experience deep-dive technical questions grounded in your project code. Listen to questions via Audio TTS read-aloud and submit detailed technical answers.
+5. **Readiness Feedback Report:** Receive an overall readiness score (e.g. 87/100), verified technical strengths, identified skill gaps, and actionable prep recommendations.
 
 ---
 
 ## ✨ Key Features
-* **Resume Text Extraction:** In-memory extraction of PDF and DOCX resume content.
-* **Multi-Repo Analysis:** Grounding queries against multiple repository structures, readmes, and languages simultaneously.
-* **Dynamic Interview Engine:** Real-time conversational interview interface powered by state-of-the-art Llama 3.3 LLMs.
-* **Persistent Sessions & Navigation:** Built with React Router for routing (with pages for Setup, Interview, and Reports) and local session preservation to survive browser refreshes.
-* **Evidence Reports:** Clear, objective summaries highlighting verified strengths, gaps, "undefended" projects, and score breakdowns.
-* **Local Session History:** Reopen, review, or delete past evaluation reports directly from the landing dashboard.
+
+- 🎯 **Searchable Target Role Combobox:** Select from expanded industry roles or type any custom position (e.g. *"Student"* or *"Security Researcher"*) with real-time filtering and custom role validation.
+- 💻 **Deep Codebase Integration:** Sequential, batched GitHub API fetching inspects actual project source code, file structures, custom hooks, and documentation.
+- 🔊 **Audio Read-Aloud (Text-to-Speech):** Click the speaker button during practice sessions to hear questions spoken aloud to simulate a real audio interview.
+- ⏳ **Real-Time Session Builder:** Dedicated loading screen with glowing spinner and animated pulse indicators for parsing skills, fetching code, and generating questions.
+- 📊 **Comprehensive Evaluation Report:** Highlights architectural strengths, identified skill gaps, placement readiness score, and targeted study tips.
+- 🔄 **Multi-Key Rotation & Failover:** Automatic key scanning switches seamlessly between API keys upon hitting rate limits for 100% uptime.
+- 🛡️ **Enterprise Security & Reliability:** XML-delimited prompt injection sandboxing, Express API rate-limiting (100 req / 5 min), and real-time Discord Webhook logging alerts.
+- 🎨 **Modern Glassmorphic UI:** Built with dark mode aesthetics, hero tagline typing effect, centered gradient fading line, and memoized voice scoring.
 
 ---
 
-## 🚀 Tech Stack
-* **Frontend:** React 18, Vite, React Router DOM, TailwindCSS
-* **Backend:** Node.js, Express, Mongoose (MongoDB)
-* **AI & Integration:** Groq SDK (Llama-3.3-70b-versatile), GitHub REST API
+<div align="center">
 
----
+  **Made with ❤️ by Team Cadence**
 
-## 💻 Local Setup & Installation
-
-### Prerequisites
-* **Node.js** v20+
-* **MongoDB** (local connection or MongoDB Atlas URI)
-* **Groq API Key** (Get one at [console.groq.com](https://console.groq.com/))
-* **GitHub Token** (Classic or Fine-grained Personal Access Token to increase GitHub API rate limits)
-
-### Setup Instructions
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Coreoflore/Hackathon-Test.git
-   cd Hackathon-Test
-   ```
-
-2. **Initialize Environment variables:**
-   ```bash
-   # Copy environment templates
-   cp backend/.env.example backend/.env
-   cp frontend/.env.example frontend/.env
-   ```
-   Open `backend/.env` and fill in your secrets (`MONGODB_URI`, `GROQ_API_KEY`, and `GITHUB_TOKEN`).
-
-3. **Install Dependencies:**
-   Install packages across both the frontend and backend project workspaces:
-   ```bash
-   # Install root and backend dependencies
-   npm install
-   cd backend
-   npm install
-   
-   # Install frontend dependencies
-   cd ../frontend
-   npm install
-   ```
-
-4. **Run the Application:**
-   Open two terminal windows to run the API server and frontend client concurrently:
-
-   * **Terminal 1: Start Backend API**
-     ```bash
-     cd backend
-     npm run dev
-     ```
-     *Runs on `http://localhost:5000`*
-
-   * **Terminal 2: Start Frontend UI**
-     ```bash
-     cd frontend
-     npm run dev
-     ```
-     *Runs on `http://localhost:5173` (Vite dev server proxies `/api` calls to port `5000` automatically)*
-
----
-
-## 🧪 Running Tests
-Repovet includes a test suite verifying answer grading, resume validating, and prompt-construction integrity:
-
-```bash
-cd backend
-npm test
-```
-
----
-
-## ⚙️ Environment Variables
-
-### Backend (`backend/.env`)
-
-| Variable | Purpose | Default / Example |
-| :--- | :--- | :--- |
-| `PORT` | Local Express API port. | `5000` |
-| `MONGODB_URI` | Connection URI for the session database. | `mongodb://localhost:27017/repovet` |
-| `GROQ_API_KEY` | Groq API access token. | *(Required)* |
-| `GROQ_MODEL` | LLM model used for candidate evaluations. | `llama-3.3-70b-versatile` |
-| `GITHUB_TOKEN` | Auth token for inspecting GitHub metadata. | *(Highly Recommended)* |
-| `QUESTION_COUNT` | Default interview questions generated (3-12 range). | `6` |
-| `MONGODB_DNS_SERVERS` | Manual DNS overrides for MongoDB Atlas connection issues. | `1.1.1.1,8.8.8.8` |
+</div>

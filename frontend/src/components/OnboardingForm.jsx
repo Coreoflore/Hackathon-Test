@@ -136,35 +136,35 @@ export default function OnboardingForm({ onSessionReady }) {
     <section className="grid gap-8 py-10 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:py-20">
       <div className="max-w-xl">
         <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
-          Repovet technical interviews
+          Repovet interview practice
         </p>
         <h1 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-[42px]">
-          Turn a resume into a conversation worth having.
+          Practice interviews built around your actual work.
         </h1>
         <p className="mt-6 max-w-lg text-base leading-8 text-slate-400">
-          We compare what a candidate claims with what their work demonstrates, then build a focused interview around the gaps that matter.
+          We analyze your resume claims and GitHub project source code together to build a realistic practice interview tailored to your target role.
         </p>
         <div className="mt-9 grid max-w-md grid-cols-1 gap-3 text-xs text-slate-400 sm:grid-cols-3 sm:text-[11px]">
           <div className="rounded-xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-3 transition hover:border-cyan-500/20">
             <span className="mb-1 block text-lg font-bold text-cyan-300">01</span>
-            <span className="font-medium text-slate-400">Resume signal</span>
+            <span className="font-medium text-slate-400">Resume & Skills</span>
           </div>
           <div className="rounded-xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-3 transition hover:border-cyan-500/20">
             <span className="mb-1 block text-lg font-bold text-cyan-300">02</span>
-            <span className="font-medium text-slate-400">Repo evidence</span>
+            <span className="font-medium text-slate-400">Project Code</span>
           </div>
           <div className="rounded-xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-3 transition hover:border-cyan-500/20">
             <span className="mb-1 block text-lg font-bold text-cyan-300">03</span>
-            <span className="font-medium text-slate-400">Clear verdict</span>
+            <span className="font-medium text-slate-400">Feedback Report</span>
           </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 shadow-glow sm:p-8">
         <div className="mb-8">
-          <p className="text-sm font-medium text-cyan-200">Candidate context</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Start an interview session</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">Your resume is parsed in memory and used only to ground this session.</p>
+          <p className="text-sm font-medium text-cyan-200">Session Setup</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">Start a practice session</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Your resume is parsed in memory to generate custom questions for your session.</p>
         </div>
 
         <div className="space-y-5">

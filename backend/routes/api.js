@@ -234,7 +234,7 @@ router.post('/sessions', asyncHandler(async (request, response) => {
   }
 
   const analysisResult = await generateCandidateAnalysis(resumeText, repoDataList, targetRole, normalizedRepoUrls);
-  const questions = normalizeQuestions(await generateQuestions(analysisResult, count, repoDataList, normalizedRepoUrls), repoDataList, normalizedRepoUrls);
+  const questions = normalizeQuestions(await generateQuestions(analysisResult, count, repoDataList, normalizedRepoUrls, targetRole), repoDataList, normalizedRepoUrls);
   const candidate = await Candidate.create({ ...candidateBasics(resumeText), resumeText: resumeText.trim() });
   const session = await Session.create({
     candidateId: candidate._id,

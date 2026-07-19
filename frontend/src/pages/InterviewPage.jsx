@@ -13,11 +13,14 @@ export default function InterviewPage({ onAddToHistory }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function loadSession() {
       setIsLoading(true);
       setError('');
       try {
         const data = await getSession(sessionId);
+        if (controller.signal.aborted) return;
         if (data.status === 'completed') {
           // If already completed, go straight to report
           navigate(`/report/${sessionId}`, { replace: true });
@@ -26,14 +29,17 @@ export default function InterviewPage({ onAddToHistory }) {
         setSession(data);
         setInitialIndex(data.answeredCount || 0);
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err.message || 'Failed to load interview session.');
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     }
     if (sessionId) {
       loadSession();
     }
+
+    return () => controller.abort();
   }, [sessionId, navigate]);
 
   async function handleAnswer(questionId, answerText) {

@@ -127,31 +127,25 @@ async function fetchKeyFileContents(basePath, filePaths, headers) {
 
   const rawHeaders = { ...headers, Accept: 'application/vnd.github.raw+json' };
 
-  const fetchPromises = filePaths.map(async (filePath) => {
+  for (const filePath of filePaths) {
+    if (totalSize >= MAX_TOTAL_KEY_FILES_SIZE) break;
+
     try {
       const response = await fetch(
         `${GITHUB_API}${basePath}/contents/${encodeURIComponent(filePath)}`,
         { headers: rawHeaders }
       );
-      if (!response.ok) return null;
+      if (!response.ok) continue;
 
       const text = await response.text();
-      return { path: filePath, content: text };
+      const clipped = text.slice(0, MAX_KEY_FILE_SIZE);
+      if (totalSize + clipped.length > MAX_TOTAL_KEY_FILES_SIZE) break;
+
+      keyFiles[filePath] = clipped;
+      totalSize += clipped.length;
     } catch {
-      return null;
+      continue;
     }
-  });
-
-  const results = await Promise.all(fetchPromises);
-
-  for (const result of results) {
-    if (!result) continue;
-    
-    const clipped = result.content.slice(0, MAX_KEY_FILE_SIZE);
-    if (totalSize + clipped.length > MAX_TOTAL_KEY_FILES_SIZE) break;
-
-    keyFiles[result.path] = clipped;
-    totalSize += clipped.length;
   }
 
   return keyFiles;

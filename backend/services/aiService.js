@@ -202,6 +202,54 @@ Distinguish skills merely claimed on the resume from skills evidenced by actual 
   };
 }
 
+async function verifyAndRefineQuestions(questions, analysisJson, repoData, repoUrl) {
+  const codeContext = formatCodeContext(repoData);
+  
+  const systemPrompt = `You are a Principal Software Engineer and expert Technical Interviewer. Your role is to perform a strict Quality Assurance pass on a set of generated technical interview questions.
+Your goal is to ensure that the questions represent a realistic, senior-level interview that balances the candidate's overarching resume claims with the concrete evidence in their GitHub repository.
+
+Return exactly the JSON schema: {"questions": [{"text": "...", "type": "...", "targets": [...], "difficulty": "..."}]}
+
+CRITICAL REFINEMENT RULES & FAILURE MODES TO FIX:
+
+1. THE "LAUNDRY LIST" FALLACY:
+   - Bad: "Why does your repository not contain Go, Python, C++, Redis, Kafka, and Linux?"
+   - Fix: Rewrite to focus on the single most relevant missing architectural component, or delete the question and replace it with a deep dive into the technology they *did* use. Never list more than 2 technologies as missing.
+
+2. TOOLING vs. CODEBASE CONFUSION:
+   - Bad: "I don't see Git, Postman, Linux, or VS Code in your source files."
+   - Fix: Remove these entirely. Tools like Git and Linux are environments/utilities, not code dependencies. Replace with a question about their CI/CD, testing, or deployment strategy based on their resume.
+
+3. RESUME vs. REPO SCOPE MISMATCH:
+   - Bad: Penalizing a single, specific React project repository for not containing a completely unrelated skill (like C++ or Flutter) listed elsewhere on the candidate's resume.
+   - Fix: Reframe the question to ask about the *overall* resume claim without demanding it be in this specific repo. (e.g., "You mentioned extensive C++ experience on your resume. How did your background in C++ influence your architectural decisions when building this React app?")
+
+4. LACK OF RESUME INTEGRATION:
+   - If the questions only focus on the repository's files and ignore the candidate's resume achievements, rewrite at least two questions to explicitly bridge the gap.
+   - Good: "Your resume states you reduced latency by 40% in a previous role. Looking at how you structured the API endpoints in this repository, how did you apply those performance optimization principles here?"
+
+5. ROBOTIC TONE:
+   - Bad: "Explain the discrepancy between the claimed skills and evidenced skills regarding..."
+   - Fix: Make it sound conversational. "I noticed your resume highlights X, but the codebase uses Y. Could you walk me through that decision?"
+
+Ensure each question covers a distinct technical area (architecture, state management, security, database, etc.) and is something a real human engineer would ask.`;
+
+  const userPrompt = `Review and refine these generated questions:
+${JSON.stringify(questions, null, 2)}
+
+Original Context:
+Candidate Analysis: ${clip(analysisJson, 8000)}
+Actual Code & File Structure: ${clip(codeContext, 12000)}`;
+
+  try {
+    const result = await requestJson(systemPrompt, userPrompt);
+    return Array.isArray(result) ? result : result?.questions || questions;
+  } catch (error) {
+    console.error('Failed to verify/refine questions, falling back to raw list:', error);
+    return questions;
+  }
+}
+
 export async function generateQuestions(analysisJson, questionCount = Number(process.env.QUESTION_COUNT || 6), repoData = {}, repoUrl = '') {
   const count = Number(questionCount);
   if (!Number.isInteger(count) || count < 3 || count > 12) {
@@ -210,29 +258,47 @@ export async function generateQuestions(analysisJson, questionCount = Number(pro
 
   const codeContext = formatCodeContext(repoData);
 
-  const result = await requestJson(
-    'You are an expert technical interviewer who has inspected the candidate\'s actual source code. Return only valid JSON in the shape {"questions":[...]}. Every question object must have text, type, targets (array), and difficulty.',
-    `Using this grounded candidate analysis and the actual repository source code, create exactly ${count} interview questions that test whether the candidate can defend their claims. Mix technical, behavioral, project-deep-dive, and verification questions where the count allows. Make each question specific and answerable.
+  const systemPrompt = `You are an elite, senior staff software engineer tasked with conducting a highly personalized, deep-dive technical interview.
+You are evaluating a candidate based on TWO primary sources of truth:
+1. Their Resume: The overarching claims, achievements, past roles, and skills they profess to have.
+2. Their Submitted Code (GitHub): The actual file trees, source code, config files, and dependency manifests of a repository they submitted as evidence of their abilities.
 
-CRITICAL INSTRUCTIONS FOR CODE-GROUNDED QUESTIONS:
-- You have access to the repository's actual file tree and key source files (dependency manifests, entry points, config files).
-- Reference specific files, dependencies, or patterns you found (or did NOT find) in the actual code when forming questions.
-- If the README or resume claims a technology (e.g., Redis, WebSockets, GraphQL) but the actual package.json/requirements.txt or source files show no trace of it, ask the candidate to explain this discrepancy.
-- Ask questions about actual code patterns visible in their source files — for example, how they structured their Express routes, why they chose certain dependencies, or how their Dockerfile is configured.
-- At least one question should directly reference a specific file or dependency from their actual codebase.
-- Do NOT rely solely on the README for forming questions — treat the actual source code as the primary evidence.
+YOUR OBJECTIVE:
+Generate questions that test the alignment and validity of their resume claims by cross-referencing them against their actual codebase. You must not merely audit the codebase in a vacuum; you must interview the *candidate* about their *experience*, using the codebase as a grounding mechanism.
 
-QUESTION QUALITY RULES (STRICTLY FOLLOW):
-- NEVER ask trivial questions about static assets, image files, fonts, icons, CSS naming, or file/folder naming conventions. These have zero value in a technical interview.
-- NEVER ask about file organization or directory structure as a standalone question — only reference structure when it reveals architectural decisions.
-- Every question MUST test a meaningful technical skill: system design, architectural trade-offs, dependency choices, error handling, security, performance, database design, API design, state management, testing strategy, or deployment.
-- Each question MUST be clearly distinct from every other question — no two questions should test the same concept or overlap in topic.
-- Questions should sound like they come from a senior engineer reviewing the candidate's actual code, not from someone browsing a file explorer.
-- Prioritize questions about: why certain libraries were chosen over alternatives, how data flows through the system, error handling strategies, security considerations, scalability decisions, and testing approaches.
+Return only valid JSON matching this schema exactly: {"questions": [{"text": "...", "type": "...", "targets": [...], "difficulty": "..."}]}
 
-A submitted GitHub URL is positive evidence that a repository was provided. Do not write questions with unsupported premises such as "given the lack of evidence in your GitHub repository" when a repository URL or repository metadata exists. For Git/GitHub questions, ask neutrally about how the candidate used Git/GitHub in the project.
+QUESTION DESIGN BLUEPRINT:
+To ensure a comprehensive and balanced interview, you must draw from the following specific strategies. Ensure at least 50% of your questions actively bridge the resume and the repository.
 
-ANALYSIS:
+[STRATEGY 1: RESUME CLAIM --> CODE IMPLEMENTATION]
+Take a high-level achievement or skill from the resume and demand to see its proof in the code.
+- Example: "On your resume, you highlighted implementing robust authentication and RBAC. Looking at your repository, I see you're using JWTs in \`auth.middleware.ts\`. Walk me through how you handle token revocation and role-based route protection in this specific setup."
+
+[STRATEGY 2: MISSING EVIDENCE / CONSTRUCTIVE GAP PROBING]
+If the resume claims expertise in a technology (e.g., Redis, microservices) that is entirely absent from the provided repository, ask how they would apply their expertise to this codebase. Do not accuse them; probe their knowledge.
+- Example: "You list extensive experience with Redis and caching strategies on your resume. I didn't see caching implemented in this repository's data layer. If you were to scale this app tomorrow, where exactly in this architecture would you inject a caching layer and why?"
+
+[STRATEGY 3: CODEBASE TRADE-OFFS & ARCHITECTURE]
+Find a specific implementation detail, dependency choice, or architectural pattern in the source code. Ask them to justify it, ideally tying it back to their past experience.
+- Example: "I noticed in \`package.json\` that you chose Redux for state management rather than React Context, despite this being a relatively small application. Given your resume mentions leading a migration away from Redux at your last job, what drove the decision to use it here?"
+
+[STRATEGY 4: SYSTEM DESIGN / SCALING SCENARIO]
+Use their existing codebase as a starting point for a system design question.
+- Example: "Right now, your \`server.js\` connects directly to a single PostgreSQL instance. If traffic spiked 100x and the database became a bottleneck, walk me through the specific architectural changes you would make to this repository to handle the load."
+
+STRICT GUARDRAILS (DO NOT VIOLATE):
+- DO NOT ask about file naming conventions, image assets, CSS, folder organization, or aesthetic choices.
+- DO NOT list massive groups of missing technologies (e.g., "Why are Go, Python, and C++ missing?"). Focus on one conceptual thread at a time.
+- DO NOT ask why environment tools like "Git", "Linux", or "Postman" are missing from source code.
+- MUST BE CONVERSATIONAL. Speak like a human engineer talking to a peer, not a robot reading an audit report.
+- NEVER start a question with "I notice that..." or "The analysis shows...". Just ask the question directly.`;
+
+  const userPrompt = `Generate exactly ${count} interview questions for this candidate that test the alignment between their resume claims and their GitHub repository.
+
+Use the candidate's resume, the analysis of their claims, and their codebase context to craft highly personalized questions.
+
+CANDIDATE ANALYSIS (resume claims vs. code evidence):
 ${clip(analysisJson, 14000)}
 
 SUBMITTED REPOSITORY URL:
@@ -241,22 +307,40 @@ ${clip(repoUrl)}
 REPOSITORY METADATA:
 ${clip(repoData, 10000)}
 
-ACTUAL CODE & FILE STRUCTURE:
-${clip(codeContext, 18000)}`
-  );
+ACTUAL SOURCE CODE & FILE STRUCTURE:
+${clip(codeContext, 18000)}
+
+IMPORTANT REMINDERS:
+- Balance: Do not just ask about the repository alone. You are interviewing the candidate about their resume claims, using the repository as the verification ground.
+- Cross-reference: Ask how specific bullet points or achievements from their resume are represented in the codebase.
+- Discrepancies: If a skill is listed as a major claim on the resume but is missing or minimal in the repo, ask how they implemented or verified that skill in their projects.
+- Make the questions direct, conversational, and professional.`;
+
+  const result = await requestJson(systemPrompt, userPrompt);
 
   const questions = Array.isArray(result) ? result : result?.questions;
   if (!Array.isArray(questions) || questions.length === 0) {
     throw new Error('Groq did not return any interview questions.');
   }
 
-  return questions.slice(0, count).map((question) => ({
+  const rawQuestions = questions.slice(0, count).map((question) => ({
+    text: String(question.text || 'Explain a technical decision you made in a recent project.'),
+    type: String(question.type || 'technical'),
+    targets: Array.isArray(question.targets) ? question.targets.map(String) : [],
+    difficulty: String(question.difficulty || 'medium')
+  }));
+
+  // Verify and refine the questions using the Principal Engineer validation pass
+  const refinedQuestions = await verifyAndRefineQuestions(rawQuestions, analysisJson, repoData, repoUrl);
+  
+  return refinedQuestions.slice(0, count).map((question) => ({
     text: String(question.text || 'Explain a technical decision you made in a recent project.'),
     type: String(question.type || 'technical'),
     targets: Array.isArray(question.targets) ? question.targets.map(String) : [],
     difficulty: String(question.difficulty || 'medium')
   }));
 }
+
 
 export async function generateFinalReport(sessionData, answersArray) {
   const result = await requestJson(

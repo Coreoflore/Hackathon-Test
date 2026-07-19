@@ -149,10 +149,49 @@ async function requestJson(system, user) {
   }
 }
 
+function formatCodeContext(repoData) {
+  const dataList = Array.isArray(repoData) ? repoData : [repoData].filter(Boolean);
+  const parts = [];
+
+  for (const data of dataList) {
+    if (!data) continue;
+
+    if (data.fileTree?.length > 0) {
+      parts.push(`FILE TREE (${data.repository?.name || 'repo'}):\n${data.fileTree.join('\n')}`);
+    }
+
+    if (data.keyFiles && Object.keys(data.keyFiles).length > 0) {
+      for (const [filePath, content] of Object.entries(data.keyFiles)) {
+        parts.push(`SOURCE FILE: ${filePath}\n${content}`);
+      }
+    }
+  }
+
+  return parts.join('\n\n');
+}
+
 export async function generateCandidateAnalysis(resumeText, repoData, targetRole, repoUrl = '') {
+  const codeContext = formatCodeContext(repoData);
+
   const result = await requestJson(
-    'You are a rigorous technical recruiter. Return only valid JSON with exactly these keys: skills_claimed (array), skills_evidenced (array), projects (array), flags (array). Do not add markdown or commentary.',
-    `Analyze this candidate for the target role: ${targetRole}. A submitted GitHub URL is evidence that a repository link was provided and, when metadata loads, that the repository is hosted on GitHub. It is not by itself proof of the candidate's personal Git command usage, ownership, or contribution history. Do not describe a repository as having a "lack of GitHub evidence" when repository metadata, languages, a README, or a submitted URL exists.\n\nRESUME:\n${clip(resumeText)}\n\nSUBMITTED REPOSITORY URL:\n${clip(repoUrl)}\n\nGITHUB REPOSITORY DATA:\n${clip(repoData, 18000)}\n\nDistinguish skills merely claimed on the resume from skills evidenced by repository details. Identify concrete projects and any inconsistencies or verification flags.`
+    'You are a rigorous technical recruiter who verifies claims by inspecting actual source code. Return only valid JSON with exactly these keys: skills_claimed (array), skills_evidenced (array), projects (array), flags (array). Do not add markdown or commentary.',
+    `Analyze this candidate for the target role: ${targetRole}. A submitted GitHub URL is evidence that a repository link was provided and, when metadata loads, that the repository is hosted on GitHub. It is not by itself proof of the candidate's personal Git command usage, ownership, or contribution history. Do not describe a repository as having a "lack of GitHub evidence" when repository metadata, languages, a README, or a submitted URL exists.
+
+IMPORTANT: You have been given the repository's actual file tree and the contents of key source files (such as package.json, entry points, and config files). Use these to verify claims — check whether dependencies listed in the README actually appear in package.json/requirements.txt, whether claimed architectural patterns are reflected in the actual source files, and whether the file structure supports the claimed project complexity. Flag any discrepancies between README claims and actual code evidence.
+
+RESUME:
+${clip(resumeText)}
+
+SUBMITTED REPOSITORY URL:
+${clip(repoUrl)}
+
+GITHUB REPOSITORY DATA:
+${clip(repoData, 12000)}
+
+ACTUAL CODE & FILE STRUCTURE:
+${clip(codeContext, 18000)}
+
+Distinguish skills merely claimed on the resume from skills evidenced by actual source code files, dependency manifests, and repository structure. Identify concrete projects and any inconsistencies or verification flags — especially cases where the README claims a technology but the actual code files show no evidence of it.`
   );
 
   return {
@@ -169,9 +208,41 @@ export async function generateQuestions(analysisJson, questionCount = Number(pro
     throw new Error('Question count must be an integer between 3 and 12.');
   }
 
+  const codeContext = formatCodeContext(repoData);
+
   const result = await requestJson(
-    'You are an expert interviewer. Return only valid JSON in the shape {"questions":[...]}. Every question object must have text, type, targets (array), and difficulty.',
-    `Using this grounded candidate analysis and the original repository context, create exactly ${count} interview questions that test whether the candidate can defend their claims. Mix technical, behavioral, project-deep-dive, and verification questions where the count allows. Make each question specific and answerable. A submitted GitHub URL is positive evidence that a repository was provided. If repository metadata loaded, treat the repository, languages, README, and commit/contributor counts as available evidence. Do not write questions with unsupported premises such as "given the lack of evidence in your GitHub repository" when a repository URL or repository metadata exists. For Git/GitHub questions, ask neutrally about how the candidate used Git/GitHub in the project; do not assume either proficiency or lack of proficiency.\n\nANALYSIS:\n${clip(analysisJson, 14000)}\n\nSUBMITTED REPOSITORY URL:\n${clip(repoUrl)}\n\nREPOSITORY CONTEXT:\n${clip(repoData, 18000)}`
+    'You are an expert technical interviewer who has inspected the candidate\'s actual source code. Return only valid JSON in the shape {"questions":[...]}. Every question object must have text, type, targets (array), and difficulty.',
+    `Using this grounded candidate analysis and the actual repository source code, create exactly ${count} interview questions that test whether the candidate can defend their claims. Mix technical, behavioral, project-deep-dive, and verification questions where the count allows. Make each question specific and answerable.
+
+CRITICAL INSTRUCTIONS FOR CODE-GROUNDED QUESTIONS:
+- You have access to the repository's actual file tree and key source files (dependency manifests, entry points, config files).
+- Reference specific files, dependencies, or patterns you found (or did NOT find) in the actual code when forming questions.
+- If the README or resume claims a technology (e.g., Redis, WebSockets, GraphQL) but the actual package.json/requirements.txt or source files show no trace of it, ask the candidate to explain this discrepancy.
+- Ask questions about actual code patterns visible in their source files — for example, how they structured their Express routes, why they chose certain dependencies, or how their Dockerfile is configured.
+- At least one question should directly reference a specific file or dependency from their actual codebase.
+- Do NOT rely solely on the README for forming questions — treat the actual source code as the primary evidence.
+
+QUESTION QUALITY RULES (STRICTLY FOLLOW):
+- NEVER ask trivial questions about static assets, image files, fonts, icons, CSS naming, or file/folder naming conventions. These have zero value in a technical interview.
+- NEVER ask about file organization or directory structure as a standalone question — only reference structure when it reveals architectural decisions.
+- Every question MUST test a meaningful technical skill: system design, architectural trade-offs, dependency choices, error handling, security, performance, database design, API design, state management, testing strategy, or deployment.
+- Each question MUST be clearly distinct from every other question — no two questions should test the same concept or overlap in topic.
+- Questions should sound like they come from a senior engineer reviewing the candidate's actual code, not from someone browsing a file explorer.
+- Prioritize questions about: why certain libraries were chosen over alternatives, how data flows through the system, error handling strategies, security considerations, scalability decisions, and testing approaches.
+
+A submitted GitHub URL is positive evidence that a repository was provided. Do not write questions with unsupported premises such as "given the lack of evidence in your GitHub repository" when a repository URL or repository metadata exists. For Git/GitHub questions, ask neutrally about how the candidate used Git/GitHub in the project.
+
+ANALYSIS:
+${clip(analysisJson, 14000)}
+
+SUBMITTED REPOSITORY URL:
+${clip(repoUrl)}
+
+REPOSITORY METADATA:
+${clip(repoData, 10000)}
+
+ACTUAL CODE & FILE STRUCTURE:
+${clip(codeContext, 18000)}`
   );
 
   const questions = Array.isArray(result) ? result : result?.questions;

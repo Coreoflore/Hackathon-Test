@@ -1,7 +1,7 @@
 {
   "name": "hackathon-test",
   "version": "1.0.0",
-  "description": "Repovet turns a candidate's resume and public GitHub repository into a tailored interview and a hiring-manager-style report.",
+  "description": "Repovet analyzes your resume and GitHub repositories together to generate realistic, project-grounded technical interview practice and feedback.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

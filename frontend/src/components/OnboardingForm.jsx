@@ -27,9 +27,11 @@ export default function OnboardingForm({ onSessionReady }) {
   const [questionCount, setQuestionCount] = useState(6);
   const [parsedResumeText, setParsedResumeText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isBuildingSession, setIsBuildingSession] = useState(false);
   const [error, setError] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const loadingRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -44,6 +46,12 @@ export default function OnboardingForm({ onSessionReady }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isDropdownOpen]);
+
+  useEffect(() => {
+    if (isBuildingSession && loadingRef.current) {
+      loadingRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isBuildingSession]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -85,10 +93,12 @@ export default function OnboardingForm({ onSessionReady }) {
         return;
       }
 
+      setIsBuildingSession(true);
       const session = await createSession({ resumeText: parsedResumeText, repoUrls: filteredRepoUrls, targetRole, questionCount: parsedQuestionCount });
       onSessionReady({ ...session, repoUrls: filteredRepoUrls, targetRole, questionCount: parsedQuestionCount });
     } catch (requestError) {
       setError(requestError.message);
+      setIsBuildingSession(false);
     } finally {
       setIsLoading(false);
     }
@@ -131,6 +141,34 @@ export default function OnboardingForm({ onSessionReady }) {
   const hasExactMatch = roles.some(role =>
     role.toLowerCase() === (targetRole || '').toLowerCase().trim()
   );
+
+  if (isBuildingSession) {
+    return (
+      <section ref={loadingRef} className="mx-auto max-w-3xl py-12 min-h-[480px] flex items-center justify-center">
+        <div className="w-full rounded-3xl border border-cyan-300/20 bg-cyan-300/[0.04] p-8 sm:p-12 text-center shadow-glow">
+          <div className="mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-4 border-cyan-300 border-t-transparent" />
+          <h2 className="text-2xl font-semibold text-white">Building your personalized interview session</h2>
+          <p className="mt-4 max-w-lg mx-auto text-sm leading-7 text-slate-400">
+            We're analyzing your resume claims against your GitHub repositories to craft deep-dive technical questions for <span className="font-medium text-cyan-200">{targetRole || 'your target role'}</span>. This typically takes 10–20 seconds.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-6 text-xs uppercase tracking-[0.14em] text-slate-500">
+            <span className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Parsing Resume & Skills
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" style={{ animationDelay: '0.5s' }} />
+              Fetching GitHub Source Code
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '1s' }} />
+              Generating Tailored Questions
+            </span>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="grid gap-8 py-10 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:py-20">

@@ -19,9 +19,8 @@ function configureMongoDns() {
   }
 }
 
-configureMongoDns();
-
 export async function connectDB() {
+  configureMongoDns();
   const mongoUri = process.env.MONGODB_URI;
 
   if (!mongoUri) {

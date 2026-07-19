@@ -24,4 +24,7 @@ const sessionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+sessionSchema.index({ candidateId: 1 });
+sessionSchema.index({ status: 1 });
+
 export default mongoose.model('Session', sessionSchema);

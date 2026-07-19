@@ -2,18 +2,28 @@ import { useState, useEffect, useRef } from 'react';
 import { createSession, uploadResume } from '../services/api.js';
 
 const roles = [
-  'Frontend Engineer',
-  'Backend Engineer',
   'Full-Stack Engineer',
+  'Backend Engineer',
+  'Frontend Engineer',
+  'DevOps / Platform Engineer',
+  'Site Reliability Engineer (SRE)',
+  'Cloud / Infrastructure Architect',
+  'Mobile Engineer (iOS / Android)',
+  'AI / Machine Learning Engineer',
+  'Data Engineer',
   'Data Scientist',
-  'Product Manager',
-  'DevOps / Platform Engineer'
+  'Cybersecurity / Security Engineer',
+  'QA / Test Automation Engineer',
+  'Embedded Systems / Firmware Engineer',
+  'Systems Software Engineer',
+  'Technical Product Manager',
+  'Engineering Manager / Tech Lead'
 ];
 
 export default function OnboardingForm({ onSessionReady }) {
   const [file, setFile] = useState(null);
   const [repoUrls, setRepoUrls] = useState(['https://github.com/']);
-  const [targetRole, setTargetRole] = useState(roles[0]);
+  const [targetRole, setTargetRole] = useState('');
   const [questionCount, setQuestionCount] = useState(6);
   const [parsedResumeText, setParsedResumeText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +49,10 @@ export default function OnboardingForm({ onSessionReady }) {
     event.preventDefault();
     if (!file) {
       setError('Choose a PDF or DOCX resume to begin.');
+      return;
+    }
+    if (!targetRole.trim()) {
+      setError('Select or type a target role to begin.');
       return;
     }
 
@@ -111,39 +125,46 @@ export default function OnboardingForm({ onSessionReady }) {
     setRepoUrls(newRepoUrls);
   }
 
+  const filteredRoles = roles.filter(role =>
+    role.toLowerCase().includes((targetRole || '').toLowerCase().trim())
+  );
+  const hasExactMatch = roles.some(role =>
+    role.toLowerCase() === (targetRole || '').toLowerCase().trim()
+  );
+
   return (
     <section className="grid gap-8 py-10 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:py-20">
       <div className="max-w-xl">
         <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
-          Repovet technical interviews
+          Repovet interview practice
         </p>
         <h1 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-[42px]">
-          Turn a resume into a conversation worth having.
+          Practice interviews built around your actual work.
         </h1>
         <p className="mt-6 max-w-lg text-base leading-8 text-slate-400">
-          We compare what a candidate claims with what their work demonstrates, then build a focused interview around the gaps that matter.
+          We analyze your resume claims and GitHub project source code together to build a realistic practice interview tailored to your target role.
         </p>
         <div className="mt-9 grid max-w-md grid-cols-1 gap-3 text-xs text-slate-400 sm:grid-cols-3 sm:text-[11px]">
           <div className="rounded-xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-3 transition hover:border-cyan-500/20">
             <span className="mb-1 block text-lg font-bold text-cyan-300">01</span>
-            <span className="font-medium text-slate-400">Resume signal</span>
+            <span className="font-medium text-slate-400">Resume & Skills</span>
           </div>
           <div className="rounded-xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-3 transition hover:border-cyan-500/20">
             <span className="mb-1 block text-lg font-bold text-cyan-300">02</span>
-            <span className="font-medium text-slate-400">Repo evidence</span>
+            <span className="font-medium text-slate-400">Project Code</span>
           </div>
           <div className="rounded-xl border border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent p-3 transition hover:border-cyan-500/20">
             <span className="mb-1 block text-lg font-bold text-cyan-300">03</span>
-            <span className="font-medium text-slate-400">Clear verdict</span>
+            <span className="font-medium text-slate-400">Feedback Report</span>
           </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 shadow-glow sm:p-8">
         <div className="mb-8">
-          <p className="text-sm font-medium text-cyan-200">Candidate context</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Start an interview session</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">Your resume is parsed in memory and used only to ground this session.</p>
+          <p className="text-sm font-medium text-cyan-200">Session Setup</p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">Start a practice session</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">Your resume is parsed in memory to generate custom questions for your session.</p>
         </div>
 
         <div className="space-y-5">
@@ -250,44 +271,92 @@ export default function OnboardingForm({ onSessionReady }) {
           <label className="block text-sm text-slate-300">
             Target role
             <div ref={dropdownRef} className="relative mt-2">
-              <button
-                type="button"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-200 transition hover:border-cyan-300/60 focus:border-cyan-300 focus:outline-none"
-              >
-                <span>{targetRole}</span>
-                <svg
-                  className={`h-4 w-4 text-slate-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-cyan-300' : ''}`}
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
+              <div className="relative">
+                <input
+                  type="text"
+                  value={targetRole}
+                  onChange={(e) => {
+                    setTargetRole(e.target.value);
+                    setIsDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsDropdownOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      setIsDropdownOpen(false);
+                    } else if (e.key === 'Escape') {
+                      setIsDropdownOpen(false);
+                    }
+                  }}
+                  placeholder="Type or select a role (e.g. Frontend Engineer, Student...)"
+                  aria-expanded={isDropdownOpen}
+                  className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-200 pr-10 transition hover:border-cyan-300/60 focus:border-cyan-300 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-cyan-300 p-1"
+                  aria-label="Toggle role options"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+                  <svg
+                    className={`h-4 w-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-cyan-300' : ''}`}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
 
               {isDropdownOpen && (
-                <ul className="absolute z-20 mt-2 max-h-60 w-full overflow-auto no-scrollbar rounded-xl border border-white/10 bg-slate-900 p-1.5 shadow-2xl shadow-slate-950/80 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150">
-                  {roles.map((role) => (
-                    <li key={role}>
+                <ul role="listbox" aria-label="Target role" className="absolute z-20 mt-2 max-h-60 w-full overflow-auto no-scrollbar rounded-xl border border-white/10 bg-slate-900 p-1.5 shadow-2xl shadow-slate-950/80 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-150">
+                  {filteredRoles.length > 0 ? (
+                    filteredRoles.map((role) => (
+                      <li key={role}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={targetRole === role}
+                          onClick={() => {
+                            setTargetRole(role);
+                            setIsDropdownOpen(false);
+                          }}
+                          className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                            targetRole === role
+                              ? 'bg-cyan-300 text-slate-950 font-semibold'
+                              : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          {role}
+                        </button>
+                      </li>
+                    ))
+                  ) : (
+                    <li>
                       <button
                         type="button"
-                        onClick={() => {
-                          setTargetRole(role);
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
-                          targetRole === role
-                            ? 'bg-cyan-300 text-slate-950 font-semibold'
-                            : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                        }`}
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm text-cyan-300 bg-cyan-300/10 font-medium"
                       >
-                        {role}
+                        ✦ Use custom role: "{targetRole}"
                       </button>
                     </li>
-                  ))}
+                  )}
+                  {!hasExactMatch && targetRole.trim() && filteredRoles.length > 0 && (
+                    <li className="border-t border-white/5 mt-1 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-xs text-cyan-300 hover:bg-cyan-300/10 font-medium"
+                      >
+                        ✦ Use custom role: "{targetRole.trim()}"
+                      </button>
+                    </li>
+                  )}
                 </ul>
               )}
             </div>

@@ -11,25 +11,31 @@ export default function ReportPage({ onDeleteFromHistory }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function loadReport() {
       setIsLoading(true);
       setError('');
       try {
         const data = await getSession(sessionId);
+        if (controller.signal.aborted) return;
         if (!data.finalReport) {
           setError('No report has been generated for this session yet.');
         } else {
           setSession(data);
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err.message || 'Failed to load report session.');
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     }
     if (sessionId) {
       loadReport();
     }
+
+    return () => controller.abort();
   }, [sessionId]);
 
   function handleRestart() {

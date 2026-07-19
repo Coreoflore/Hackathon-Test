@@ -38,9 +38,7 @@ function AppHeader() {
   return (
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6 lg:px-8">
       <div className="flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-lg text-cyan-200">
-          ◈
-        </div>
+        <img src="/favicon.jpg" alt="Repovet Logo" className="h-10 w-10 rounded-xl object-cover" />
         <div>
           <p className="font-semibold tracking-tight text-white">Repovet</p>
           <p className="text-xs text-slate-500">Evidence over guesswork</p>
@@ -90,6 +88,13 @@ function AppContent() {
           <Route path="/" element={<LandingPage history={history} />} />
           <Route path="/interview/:sessionId" element={<InterviewPage onAddToHistory={handleAddToHistory} />} />
           <Route path="/report/:sessionId" element={<ReportPage onDeleteFromHistory={handleDeleteFromHistory} />} />
+          <Route path="*" element={
+            <div className="mx-auto max-w-2xl py-24 text-center">
+              <h1 className="text-6xl font-bold text-white">404</h1>
+              <p className="mt-4 text-lg text-slate-400">This page doesn't exist.</p>
+              <a href="/" className="mt-8 inline-block rounded-xl bg-cyan-300 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">Go Home</a>
+            </div>
+          } />
         </Routes>
       </main>
     </div>

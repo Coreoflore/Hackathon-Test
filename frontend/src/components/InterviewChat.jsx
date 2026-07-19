@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import MarkdownRenderer from './MarkdownRenderer.jsx';
 
 function draftKey(sessionId, questionIndex) {
@@ -65,6 +65,26 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
     };
   }, [currentIndex]);
 
+  const preferredVoice = useMemo(() => {
+    const maleKeywords = ['male', 'guy', 'david', 'mark', 'george', 'ryan', 'thomas', 'stefan', 'christopher', 'eric', 'james', 'richard'];
+
+    const scoredVoices = voices
+      .filter(v => v.lang.toLowerCase().startsWith('en'))
+      .map(v => {
+        let score = 0;
+        const name = v.name.toLowerCase();
+        if (maleKeywords.some(keyword => name.includes(keyword))) score += 200;
+        if (name.includes('natural')) score += 100;
+        if (name.includes('google') || name.includes('siri')) score += 50;
+        if (v.lang.toLowerCase() === 'en-us') score += 10;
+        else if (v.lang.toLowerCase() === 'en-gb') score += 5;
+        return { voice: v, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    return scoredVoices.length > 0 ? scoredVoices[0].voice : null;
+  }, [voices]);
+
   function handleSpeak() {
     if (!window.speechSynthesis) {
       alert('Text-to-speech is not supported in this browser.');
@@ -84,44 +104,6 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
       .replace(/https?:\/\/[^\s]+/g, 'link');
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
-
-    // Keywords indicating male voices
-    const maleKeywords = ['male', 'guy', 'david', 'mark', 'george', 'ryan', 'thomas', 'stefan', 'christopher', 'eric', 'james', 'richard'];
-
-    const scoredVoices = voices
-      .filter(v => v.lang.toLowerCase().startsWith('en'))
-      .map(v => {
-        let score = 0;
-        const name = v.name.toLowerCase();
-
-        // 1. Strongly prioritize male voices
-        const isMale = maleKeywords.some(keyword => name.includes(keyword));
-        if (isMale) {
-          score += 200;
-        }
-
-        // 2. Prioritize Natural/Neural high-fidelity voices
-        if (name.includes('natural')) {
-          score += 100;
-        }
-
-        // 3. Prioritize Google / Siri voices
-        if (name.includes('google') || name.includes('siri')) {
-          score += 50;
-        }
-
-        // 4. Accent preferences
-        if (v.lang.toLowerCase() === 'en-us') {
-          score += 10;
-        } else if (v.lang.toLowerCase() === 'en-gb') {
-          score += 5;
-        }
-
-        return { voice: v, score };
-      })
-      .sort((a, b) => b.score - a.score);
-
-    const preferredVoice = scoredVoices.length > 0 ? scoredVoices[0].voice : null;
 
     if (preferredVoice) {
       utterance.voice = preferredVoice;
@@ -180,6 +162,25 @@ export default function InterviewChat({ questions, sessionId, onAnswer, onFinish
         <div className="rounded-3xl border border-rose-400/30 bg-rose-400/10 p-8 text-center">
           <h1 className="text-2xl font-semibold text-white">No interview questions are available.</h1>
           <p className="mt-3 text-sm leading-6 text-rose-100/80">The session did not return a usable question list. Please start a new session.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (isFinishing) {
+    return (
+      <section className="mx-auto max-w-3xl py-16">
+        <div className="rounded-3xl border border-cyan-300/20 bg-cyan-300/[0.04] p-10 text-center shadow-glow">
+          <div className="mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-4 border-cyan-300 border-t-transparent" />
+          <h1 className="text-2xl font-semibold text-white">Generating your evaluation report</h1>
+          <p className="mt-4 max-w-lg mx-auto text-sm leading-7 text-slate-400">
+            We're analyzing your answers against the repository evidence and resume claims. This typically takes 15–30 seconds.
+          </p>
+          <div className="mt-8 flex justify-center gap-8 text-xs uppercase tracking-[0.14em] text-slate-500">
+            <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />Grading answers</span>
+            <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" style={{ animationDelay: '0.5s' }} />Cross-referencing evidence</span>
+            <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '1s' }} />Writing report</span>
+          </div>
         </div>
       </section>
     );

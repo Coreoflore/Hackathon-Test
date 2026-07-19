@@ -11,7 +11,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { connectDB } from './config/db.js';
 import apiRouter from './routes/api.js';
-import { sendErrorToDiscord } from './services/discordService.js';
+import { sendErrorToDiscord, sendLogToDiscord } from './services/discordService.js';
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
@@ -34,11 +34,27 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 5 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many requests. Please try again later.' }
+  handler: (request, response, _next, options) => {
+    const clientIp = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress || 'Unknown IP';
+    
+    sendLogToDiscord(
+      '⚠️ Rate Limit Exceeded',
+      `An IP address has exceeded the limit of 100 requests per 5 minutes.`,
+      [
+        { name: 'Client IP', value: String(clientIp), inline: true },
+        { name: 'Request Path', value: request.originalUrl || request.path, inline: true },
+        { name: 'HTTP Method', value: request.method, inline: true }
+      ],
+      15158332
+    );
+
+    response.status(options.statusCode).json(options.message);
+  },
+  message: { error: 'Too many requests. Please try again in a few minutes.' }
 });
 app.use('/api', apiLimiter);
 

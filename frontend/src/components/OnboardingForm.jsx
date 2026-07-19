@@ -75,8 +75,8 @@ export default function OnboardingForm({ onSessionReady }) {
     }
 
     const parsedQuestionCount = Number(questionCount);
-    if (!Number.isInteger(parsedQuestionCount) || parsedQuestionCount < 3 || parsedQuestionCount > 12) {
-      setError('Interview length must be a whole number between 3 and 12.');
+    if (!Number.isInteger(parsedQuestionCount) || parsedQuestionCount < 3 || parsedQuestionCount > 10) {
+      setError('Interview length must be a whole number between 3 and 10.');
       return;
     }
 
@@ -403,8 +403,8 @@ export default function OnboardingForm({ onSessionReady }) {
           <label className="block text-sm text-slate-300">
             Interview length
             <span className="mt-2 flex items-center gap-3">
-              <input value={questionCount} onChange={(event) => setQuestionCount(event.target.value)} type="number" min="3" max="12" step="1" className="input-field w-24" />
-              <span className="shrink-0 text-xs text-slate-500">questions · choose 3–12</span>
+              <input value={questionCount} onChange={(event) => setQuestionCount(event.target.value)} type="number" min="3" max="10" step="1" className="input-field w-24" />
+              <span className="shrink-0 text-xs text-slate-500">questions · choose 3–10</span>
             </span>
           </label>
         </div>

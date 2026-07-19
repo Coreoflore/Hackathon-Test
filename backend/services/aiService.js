@@ -261,6 +261,7 @@ Your role is to perform a strict Quality Assurance pass on a set of generated te
 Your goal is to ensure that the questions represent a realistic, role-tailored interview for a ${targetRole} that balances the candidate's overarching resume claims with the concrete evidence in their GitHub repository.
 
 Return exactly the JSON schema: {"questions": [{"text": "...", "type": "...", "targets": [...], "difficulty": "..."}]}
+CRITICAL: You MUST return EXACTLY ${questions.length} questions. If you delete a bad question, you MUST generate a replacement so the total count remains exactly ${questions.length}. Do not return more or fewer.
 
 CRITICAL REFINEMENT RULES & FAILURE MODES TO FIX:
 
@@ -308,8 +309,8 @@ Actual Code & File Structure: ${clip(codeContext, 12000)}`;
 
 export async function generateQuestions(analysisJson, questionCount = Number(process.env.QUESTION_COUNT || 6), repoData = {}, repoUrl = '', targetRole = 'Software Engineer') {
   const count = Number(questionCount);
-  if (!Number.isInteger(count) || count < 3 || count > 12) {
-    throw new Error('Question count must be an integer between 3 and 12.');
+  if (!Number.isInteger(count) || count < 3 || count > 10) {
+    throw new Error('Question count must be an integer between 3 and 10.');
   }
 
   const codeContext = formatCodeContext(repoData);
@@ -360,7 +361,7 @@ STRICT GUARDRAILS (DO NOT VIOLATE):
 - MUST BE CONVERSATIONAL. Speak like a human engineer talking to a peer, not a robot reading an audit report.
 - NEVER start a question with "I notice that..." or "The analysis shows...". Just ask the question directly.`;
 
-  const userPrompt = `Generate exactly ${count} interview questions for a candidate applying for the role of "${targetRole}". Test the alignment between their resume claims and their GitHub repository, focusing specifically on competencies needed for a "${targetRole}".
+  const userPrompt = `Generate EXACTLY ${count} interview questions for a candidate applying for the role of "${targetRole}". You MUST return exactly ${count} questions, no more and no less. Test the alignment between their resume claims and their GitHub repository, focusing specifically on competencies needed for a "${targetRole}".
 
 TARGET ROLE:
 <TARGET_ROLE>

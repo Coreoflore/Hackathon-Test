@@ -14,6 +14,8 @@ import apiRouter from './routes/api.js';
 import { sendErrorToDiscord, sendLogToDiscord } from './services/discordService.js';
 
 const app = express();
+// Trust the reverse proxy to get the real client IP (fixes localhost rate limiting)
+app.set('trust proxy', 1);
 const port = Number(process.env.PORT || 5000);
 
 const allowedOrigins = process.env.CORS_ORIGIN
